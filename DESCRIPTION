@@ -1,4 +1,4 @@
-Package: invafish.sim
+Package: invafish-sim
 Type: Package
 Title: Simulate translocations and impact of invasive freswhater fish
 Version: 0.1.0
