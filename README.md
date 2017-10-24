@@ -2,11 +2,12 @@
 Collection of function to simulate the translocations and their impact of invasive freswhater fish. Intended for internal use in the project, and for documenting results.
 
 ## Installation
-`
+
+```r
 install.packages("devtools")
 devtools::install_github("NINAnor/invafish-sim")
 
-`
+```
 ## Orgainization
 Organized as a R pacakge: see http://r-pkgs.had.co.nz/ for description on how to work with this, especially the (github section)[http://r-pkgs.had.co.nz/git.html] for introduction on how to work with this through github. 
 
