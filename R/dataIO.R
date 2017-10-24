@@ -9,7 +9,7 @@
 get_inndata <- function(serveradress,datafolder){
 
   # creating db connection object
-  nofa_db <- src_postgres(host=rstudioapi::askForPassword("Please enter server adress"),
+  nofa_db <- src_postgres(host=serveradress,
                           dbname="nofa",
                           user=rstudioapi::askForPassword("Please enter your user"),
                           password=rstudioapi::askForPassword("Please enter your psw"),
@@ -27,7 +27,7 @@ get_inndata <- function(serveradress,datafolder){
   # save to disk as RData
   path_to_outdatafile <- paste(datafolder,"/view_occurrence_by_event.rds",sep="")
   saveRDS(view_occurrence_by_event,path_to_outdatafile)
-  RPostgreSQL::dbDisconnect(src_temp$nofa_db)
+  RPostgreSQL::dbDisconnect(nofa_db$con)
 }
 
 #' Download and store connectivity matrix from the NOFA database.
@@ -43,7 +43,7 @@ get_inndata <- function(serveradress,datafolder){
 get_connectivity <- function(serveradress,datafolder,tablename){
 
   # creating db connection object
-  nofa_db <- src_postgres(host=rstudioapi::askForPassword("Please enter server adress"),
+  nofa_db <- src_postgres(host=serveradress,
                           dbname="nofa",
                           user=rstudioapi::askForPassword("Please enter your user"),
                           password=rstudioapi::askForPassword("Please enter your psw"),
@@ -61,6 +61,6 @@ get_connectivity <- function(serveradress,datafolder,tablename){
   # save to disk as RData
   path_to_outdatafile <- paste(datafolder,"/connectivity_troendelag.rds",sep="")
   saveRDS(connectivity_troendelag,path_to_outdatafile)
-  RPostgreSQL::dbDisconnect(src_temp$nofa_db)
+  RPostgreSQL::dbDisconnect(nofa_db$con)
 
 }
