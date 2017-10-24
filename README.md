@@ -1,5 +1,5 @@
 # invafish-sim
-Collection of function to simulate the translocations and their impact of invasive freswhater fish
+Collection of function to simulate the translocations and their impact of invasive freswhater fish. Intended for internal use in the project, and for documenting results.
 
 ## Orgainization
 Organized as a R pacakge: see http://r-pkgs.had.co.nz/ for description on how to work with this. 
