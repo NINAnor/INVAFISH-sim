@@ -5,6 +5,9 @@
 #' @return A data.frame stored as .rds object named view_occurrence_by_event.rds
 #' @examples
 #' get_inndata(serveradress="my-server.no",datafolder="./data")
+#'
+#' @export
+#'
 
 get_inndata <- function(serveradress,datafolder){
 
@@ -39,6 +42,7 @@ get_inndata <- function(serveradress,datafolder){
 #' @examples
 #' get_connectivity(serveradress="my-server.no",datafolder="./data",tablename="temporary.connectivity_troendelag")
 #'
+#' @export
 
 get_connectivity <- function(serveradress,datafolder,tablename){
 

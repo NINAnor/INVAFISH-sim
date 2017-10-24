@@ -13,13 +13,19 @@ Basic documentation on usage. Functions described here will usually be run seque
 
 ## 0. load auxiliary packages 
 ```{r, eval = FALSE}
+# install and load invafish-sim
+install.packages("devtools") # install devtools if needed
+devtools::install_github("NINAnor/invafish-sim")
+
+# load packages
+library(invafish.sim)
 library(dbplyr)
 library(dplyr)
 
 ```
 
 
-## 1. Getting data inn 
+## 1. Getting raw-data inn 
 Using the precompiled view "view_occurrence_by_event" from the NOFA database, which basically coarses down individual occurrences to an event basis and links these to waterBodyID and environmental charactheristics. i.e. one row in this view for each species observed during one "sampling-event". Note that sampling event not need to be survey type of sampling, but also an observation. 
 
 ```{r, eval = FALSE}

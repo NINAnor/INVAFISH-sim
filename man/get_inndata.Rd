@@ -19,4 +19,5 @@ Download and store inndata from the NOFA database.
 }
 \examples{
 get_inndata(serveradress="my-server.no",datafolder="./data")
+
 }
