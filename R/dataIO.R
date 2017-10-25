@@ -6,13 +6,15 @@
 #' @examples
 #' get_inndata(serveradress="my-server.no",datafolder="./data")
 #'
+#' @import dplyr
+#' @import dbplyr
 #' @export
 #'
 
 get_inndata <- function(serveradress,datafolder){
 
   # creating db connection object
-  nofa_db <- src_postgres(host=serveradress,
+  nofa_db <- dplyr::src_postgres(host=serveradress,
                           dbname="nofa",
                           user=rstudioapi::askForPassword("Please enter your user"),
                           password=rstudioapi::askForPassword("Please enter your psw"),
@@ -42,6 +44,8 @@ get_inndata <- function(serveradress,datafolder){
 #' @examples
 #' get_connectivity(serveradress="my-server.no",datafolder="./data",tablename="temporary.connectivity_troendelag")
 #'
+#' @import dplyr
+#' @import dbplyr
 #' @export
 
 get_connectivity <- function(serveradress,datafolder,tablename){

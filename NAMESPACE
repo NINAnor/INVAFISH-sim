@@ -2,3 +2,5 @@
 
 export(get_connectivity)
 export(get_inndata)
+import(dbplyr)
+import(dplyr)
