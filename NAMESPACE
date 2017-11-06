@@ -2,5 +2,12 @@
 
 export(get_connectivity)
 export(get_inndata)
+export(wrangle_and_slice)
+import(FNN)
+import(data.table)
 import(dbplyr)
 import(dplyr)
+import(lubridate)
+import(sp)
+import(stringr)
+import(tidyr)
