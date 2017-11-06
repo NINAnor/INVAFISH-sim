@@ -108,7 +108,7 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   # Select locations of all populations of focal species at start of timeslot i.
   # Useatd for calcualation distance to closest population
   data1 <- inndata2 %>%
-    filter(year>=start_year,scientificName==focal_species) %>%
+    filter(year<=start_year,scientificName==focal_species) %>%
     dplyr::select(utm_x,utm_y,waterBodyID) %>% distinct()
 
   # Select all locations for which there where observations of fish
