@@ -135,8 +135,9 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   # match back with inndata
   inndata3 <- left_join(inndata2,distance_data,by="waterBodyID")
 
-
-  # Add 0/1 column of introductions occuring during timeslot --------.
+  #########################################################################
+  # Add 0/1 column of introductions occuring during timeslot -------------
+  #########################################################################
   # In order for this to classify as an introduction event,
   # we first need to check out that the species not have been
   # observed in the given waterbody before.
