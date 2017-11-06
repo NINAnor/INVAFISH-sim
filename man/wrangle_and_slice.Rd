@@ -26,10 +26,16 @@ Wrangle input data for format required by simulation
 }
 \examples{
 
-inndata <- readRDS("./testdata/view_occurrence_by_event.rds")
-geoselect_native <- readRDS("./testdata/geoselect_native_Esox_lucius.rds")
+setwd("~/temp") # simulation working directory
+# Download example input files
+get_inndata(serveradress="my-server-adress.no",datafolder="./data") # will take som time to load
+download.file("https://ntnu.box.com/shared/static/kzgmsa898gcks57iacogpet1g2yue8ib.rds",
+             "./data/geoselect_native_Esox_lucius.rds") # not yet procedures to draw this rigth from DB
+
+inndata <- readRDS("./data/view_occurrence_by_event.rds")
+geoselect_native <- readRDS("./data/geoselect_native_Esox_lucius.rds")
 focal_species <- "Esox lucius"
 mynewdata_aslist <- wrangle_and_slice(inndata=inndata,start_year=1970,end_year=2017)
-mynewdata <- outdata[["data"]]
+mynewdata <- mynewdata_aslist[["data"]]
 
 }
