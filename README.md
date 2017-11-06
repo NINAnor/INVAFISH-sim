@@ -9,6 +9,7 @@ Typicall use will be to collate functions defined in this package building a sim
 ```r
 install.packages("devtools")
 devtools::install_github("NINAnor/invafish-sim")
+library(invasim)
 
 ```
 See vignette on [basic usage](https://github.com/NINAnor/INVAFISH-sim/blob/master/vignettes/invafish-sim%20basic.Rmd) for, well, basic usage... 
