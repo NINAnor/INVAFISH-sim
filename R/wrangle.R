@@ -18,7 +18,7 @@
 #' geoselect_native <- readRDS("./testdata/geoselect_native_Esox_lucius.rds")
 #' focal_species <- "Esox lucius"
 #' mynewdata_aslist <- wrangle_and_slice(inndata=inndata,start_year=1970,end_year=2017)
-#' mynewdata <- outdata[["data"]]
+#' mynewdata <- mynewdata_aslist[["data"]]
 #'
 #' @import dplyr
 #' @import tidyr
