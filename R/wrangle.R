@@ -117,7 +117,7 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
     dplyr::select(utm_x,utm_y,waterBodyID) %>% distinct()
 
 
-  # Calculate distance to closest population of focal species -------
+  # Calculate distance to closest population of focal species to any lake in dataset
   # at start of time-slot for all locations with fish observations at end
   # of time-slot i. Use get.knnx from the FNN package.
   nn <- get.knnx(data1[c("utm_x","utm_y")],data2[c("utm_x","utm_y")],2)
