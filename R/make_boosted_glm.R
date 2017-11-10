@@ -22,11 +22,8 @@
 library(stringr)
 library(dismo)
 library(dplyr)
-#library(gbm)
-#library(mvtboost)
-outdata_timeslot <- readRDS("./Data/outdata_timeslot_Rutilus rutilus.rds")
 source("./R/f_geoselect.R")
-outdata_timeslot <- f_geoselect_inverse_spdf(geoselect="./Data/geoselect_native_Rutilus_rutilus.rds",inndata=outdata_timeslot)
+outdata_timeslot <- f_geoselect_inverse_spdf(geoselect="./Data/geoselect_native_Rutilus_rutilus.rds",inndata=outdata_timeslot) #needs to be adressed
 # make spatial selection for model estimation - Norway minus Finnmark, Troms and Nordland. 
 # The distribution and native area for finnamark would create a lot of missery
 outdata_timeslot <- outdata_timeslot[outdata_timeslot$countryCode =="NO",]
@@ -36,8 +33,8 @@ outdata_timeslot$county<-factor(outdata_timeslot$county)
 #The function runs the model for on selected timeslot (defined by input). It would probably make most sence to select the most recent timeslot
 
 #focal_slot
-j=1
-i=1
+j=1 #choose species if more than one, will probably not be the case
+i=1 # 1 = uses lates time period
 
 # get vector of species... 
 focal_species_vec <- unique(outdata_timeslot$focal_species)
