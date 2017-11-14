@@ -22,34 +22,24 @@
 library(stringr)
 library(dismo)
 library(dplyr)
+
+
 source("./R/f_geoselect.R")
-outdata_timeslot <- f_geoselect_inverse_spdf(geoselect="./Data/geoselect_native_Rutilus_rutilus.rds",inndata=outdata_timeslot) #needs to be adressed
+outdata <- f_geoselect_inverse_spdf(geoselect="./Data/geoselect_native_Rutilus_rutilus.rds",inndata=outdata) #needs to be adressed
 # make spatial selection for model estimation - Norway minus Finnmark, Troms and Nordland. 
 # The distribution and native area for finnamark would create a lot of missery
-outdata_timeslot <- outdata_timeslot[outdata_timeslot$countryCode =="NO",]
-outdata_timeslot$countryCode<-factor(outdata_timeslot$countryCode)
-outdata_timeslot <- outdata_timeslot %>% filter(!(county %in% c("Finnmark","Troms","Nordland")))
-outdata_timeslot$county<-factor(outdata_timeslot$county)
-#The function runs the model for on selected timeslot (defined by input). It would probably make most sence to select the most recent timeslot
+outdata <- outdata[outdata$countryCode =="NO",]
+outdata$countryCode<-factor(outdata$countryCode)
+outdata <- outdata %>% filter(!(county %in% c("Finnmark","Troms","Nordland")))
+outdata$county<-factor(outdata$county)
 
-#focal_slot
-j=1 #choose species if more than one, will probably not be the case
-i=1 # 1 = uses lates time period
-
-# get vector of species... 
-focal_species_vec <- unique(outdata_timeslot$focal_species)
-t_slot_vec <- unique(outdata_timeslot$t_slot)
-
-
-# filter dataframe before analyses - quick and dirty here
-analyse.df<-outdata_timeslot[outdata_timeslot$t_slot==t_slot_vec[i] & outdata_timeslot$focal_species==focal_species_vec[j],]
 
 # remove all populations of focal species where focal species is present at start of time-slot
 # i.e. focal_specie. No idea how to do this in data.tables, but it's straith-forward with dplyr
 # using the programmable version of functions identified by underscore at the end (in this case filter_)
 focal_species_var <- stringr::str_replace(string=focal_species_vec[j], pattern=" ", replacement="_")
 select_focal <- paste("!(",focal_species_var,"==1 & introduced==0)")
-analyse.df <- analyse.df %>% dplyr::filter_(select_focal)
+analyse.df <- outdata %>% dplyr::filter_(select_focal)
 analyse.df<-as.data.frame(analyse.df) # convert to data.frame - needed for gbm.step input
 
 
