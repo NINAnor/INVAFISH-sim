@@ -61,7 +61,7 @@ wrids <- get_wrids(con)
 
 ### Hent ut data frame med kombinasjon av waterbodyID for alle innsjøer (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsjøer)
 get_wbid_wrid <- function(db_conection, eb_waterregionID) {
-sql_string <- paste("SELECT id AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE ecco_biwa_wr IN (", eb_waterregionID,")", sep='')
+sql_string <- paste("SELECT id AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE ecco_biwa_wr IN (", toString(eb_waterregionID, sep=','), ")", sep='')
 res <- dbGetQuery(db_conection, sql_string)
 res
 }
