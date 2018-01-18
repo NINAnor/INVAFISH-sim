@@ -73,7 +73,7 @@ get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
 sql_string <- paste("SET constraint_exclusion = on;
 SELECT \"lakeID\" AS  \"waterBodyID\", CAST(unnest(string_to_array(downstream_lakes, ',')) AS integer) AS downstream_lakes FROM
     temporary_agder_connectivity.lake_connectivity_summary WHERE 
-    wrid IN (", eb_waterregionID,") AND
+    wrid IN (", toString(eb_waterregionID, sep=','), ") AND
      \"lakeID\" in (", toString(waterbodyID, sep=','),");", sep='')
 res <- dbGetQuery(db_conection, sql_string)
 res
