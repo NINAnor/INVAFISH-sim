@@ -1,5 +1,5 @@
 # invafish-sim
-Collection of function to simulate the translocations and their impact of invasive freswhater fish. The intentions is that the functions should support a workflow for a MSE type of model. The package is intended for use in the INVAFISH / ODYSSEUs projects, and serve both as interenal working platform and as documentation. 
+Collection of function to simulate the translocations and their impact of invasive freswhater fish. The intentions is that the functions should support a workflow for a MSE type of model. The package is intended for use in the INVAFISH / ODYSSEUS projects, and serve both as interenal working platform and as documentation. 
 
 Typicall use will be to collate functions defined in this package building a simulation workflow. 
 
