@@ -130,13 +130,15 @@ for(j in 1:Nsims){
       
       # select out downstream lakes that does not have species at start of time-slot
       
+      #################################################################################
+      # Stefan: hos meg ser det ut til at disse linjene stort sett ikke produserer noen flere introduserte tilfeller?
       downstream_lakes <- get_downstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid))
       # select out downstream lakes that does not have species at start of time-slot
       downstream_lakes <- downstream_lakes[!(downstream_lakes %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1])]
       
       # finally assign introduction to downstream lakes (without previous obs/intro)
        tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% downstream_lakes,1,tmp_trans$introduced)
-      
+      ##################################################################################
       #.............................................................
       # Upstream dispersal - NB! Check this part.... unequal length of upstream_lakes and upstream_slopes vector!!!!
       #.............................................................
