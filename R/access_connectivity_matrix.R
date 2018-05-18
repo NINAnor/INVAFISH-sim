@@ -1,4 +1,4 @@
-# Før
+# FÃ¸r
 # # get vector of wbID for upstream lakes 
 # upstream_lakes <- connectivity$upstream_lakes[connectivity$waterBodyID %in% introduction_lakes]      
 # upstream_lakes <- paste(upstream_lakes,sep=",",collapse=",")
@@ -48,9 +48,9 @@ pool <- dbPool(
 con <- poolCheckout(pool)
 
 ####################################################################################
-# Nå
+# NÃ¥
 
-### Hent ut alle vannregioner (for Agder (mange inneholder ingen innsjøer)
+### Hent ut alle vannregioner (for Agder (mange inneholder ingen innsjÃ¸er)
 get_wrids <- function(db_conection) {
   sql_string <- "SELECT DISTINCT ON (a.gid) a.gid AS wrid FROM \"Hydrography\".\"waterregions_dem_10m_nosefi\" AS a, (SELECT geom FROM \"AdministrativeUnits\".\"Fenoscandia_Municipality_polygon\" WHERE county IN ('Vest-Agder', 'Aust-Agder')) AS b WHERE ST_Intersects(a.geom, b.geom);"
   res <- dbGetQuery(db_conection, sql_string)[,1]
@@ -59,7 +59,7 @@ get_wrids <- function(db_conection) {
 # Eksempel
 wrids <- get_wrids(con)
 
-### Hent ut data frame med kombinasjon av waterbodyID for alle innsjøer (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsjøer)
+### Hent ut data frame med kombinasjon av waterbodyID for alle innsjÃ¸er (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsjÃ¸er)
 get_wbid_wrid <- function(db_conection, eb_waterregionID) {
   sql_string <- paste("SELECT id AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE ecco_biwa_wr IN (", toString(eb_waterregionID, sep=','), ")", sep='')
   res <- dbGetQuery(db_conection, sql_string)
@@ -68,7 +68,7 @@ get_wbid_wrid <- function(db_conection, eb_waterregionID) {
 # Eksempel
 wbid_wrid <- get_wbid_wrid(con, wrids)
 
-### Hent ut data frame med unike kombinasjon av waterbodyID (kolonne 1) og id for innsjøer som ligger nedstrøms (kolonne 2)
+### Hent ut data frame med unike kombinasjon av waterbodyID (kolonne 1) og id for innsjÃ¸er som ligger nedstrÃ¸ms (kolonne 2)
 get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
   sql_string <- paste("SET constraint_exclusion = on;
                       SELECT \"lakeID\" AS  \"waterBodyID\", CAST(unnest(string_to_array(downstream_lakes, ',')) AS integer) AS downstream_lakes FROM
@@ -82,7 +82,7 @@ get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
 downstream_lakes <- get_downstream_lakes(con, unique(wbid_wrid[,1][1:100]), unique(wbid_wrid[,2][1:100]))
 
 
-### Hent ut data frame med kombinasjon av waterbodyID (kolonne 1) og id for innsjøer som ligger oppstøms og der skråning i forbindelsen er lavere enn slope_barrier (kolonne 2)
+### Hent ut data frame med kombinasjon av waterbodyID (kolonne 1) og id for innsjÃ¸er som ligger oppstÃ¸ms og der skrÃ¥ning i forbindelsen er lavere enn slope_barrier (kolonne 2)
 get_reachable_upstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID, slope_barrier) {
   sql_string <- paste("SET constraint_exclusion = on;
                       SELECT
@@ -106,6 +106,21 @@ get_reachable_upstream_lakes <- function(db_conection, waterbodyID, eb_waterregi
 }
 # Eksempel
 upstream_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,1][1:100]), unique(wbid_wrid[,2][1:100]), slope_barrirer)
+
+### Hent ut data frame med kombinasjon av waterbodyID (kolonne 1) og sannsynlighet for tilgjengelighet for gjedde (likelihood)
+get_reachable_lakes_liklihood_pike <- function(db_conection, waterbodyID) {
+  sql_string <- paste("SELECT DISTINCT ON (accessible_lake) * FROM (
+    SELECT (accessible_lakes_pike(wbid)).*
+        FROM
+            (SELECT unnest(ARRAY[", toString(waterbodyID, sep=','),"]) AS wbid) AS l
+    ) AS al
+WHERE likelihood > 0.000001
+ORDER BY accessible_lake ASC, likelihood DESC;", sep='')
+  res <- dbGetQuery(db_conection, sql_string)
+  res
+}
+# Eksempel
+accessible_lakes_likelihood_pike <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]))
 
 
 ####################################################################################
