@@ -72,9 +72,9 @@ wbid_wrid <- get_wbid_wrid(con, wrids)
 get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
   sql_string <- paste("SET constraint_exclusion = on;
                       SELECT \"lakeID\" AS  \"waterBodyID\", CAST(unnest(string_to_array(downstream_lakes, ',')) AS integer) AS downstream_lakes FROM
-                      temporary_agder_connectivity.lake_connectivity_summary WHERE 
+                      connectivity_connectivity.lake_connectivity_summary WHERE 
                       wrid IN (", toString(eb_waterregionID, sep=','), ") AND
-                      \"lakeID\" in (", toString(waterbodyID, sep=','),");", sep='')
+                      \"lakeID\" IN (", toString(waterbodyID, sep=','),");", sep='')
   res <- dbGetQuery(db_conection, sql_string)
   res
 }
@@ -88,15 +88,15 @@ get_reachable_upstream_lakes <- function(db_conection, waterbodyID, eb_waterregi
                       SELECT
                       from_lake AS source_lake, to_lake AS upstream_lake
                       FROM
-                      temporary_agder_connectivity.lake_connectivity
+                     connectivity_connectivity.lake_connectivity
                       WHERE
                       wrid in (", toString(eb_waterregionID, sep=','), ") AND
                       from_lake in (", toString(waterbodyID, sep=','), ") AND
                       upstream_slope_max_max <= ", slope_barrier, "
                       UNION ALL SELECT
-                      to_lake AS source_lake, from_lake AS upstream_lake
+                      from_lake AS source_lake, to_lake AS upstream_lake
                       FROM
-                      temporary_agder_connectivity.lake_connectivity
+                      connectivity_connectivity.lake_connectivity
                       WHERE
                       wrid in (", toString(eb_waterregionID, sep=','),") AND
                       to_lake in (", toString(waterbodyID, sep=','),") AND
