@@ -25,7 +25,7 @@ library(data.table)
 #download.file(url="https://ntnu.box.com/shared/static/1dgrjwozx4r6zcprta8oj35ocjtdj2nl.rds",
 #              destfile=tmpdata)
 #inndata_timeslot <- readRDS(tmpdata)
-inndata_timeslot<-outdata_data_orekyte   #readRDS("./Data/outdata_occurence_by_event.rds")
+inndata_timeslot<-outdata_data_gjedde   #readRDS("./Data/outdata_occurence_by_event.rds")
 
 # load functions
 source("./R/git_predict_introduction_events.R")
@@ -37,7 +37,7 @@ source("./R/f_postsim_processing.R")
 #tmpdata2 <- tempfile()
 #download.file(url="https://ntnu.box.com/shared/static/ftt7twf3fhdbm4izei0qktj382do3bx8.rds",
 #              destfile=tmpdata2)
-brt_mod <- readRDS("./Data/brt_mod_orekyte.rds")
+brt_mod <- readRDS("./Data/brt_mod_gjedde.rds")
 
 
 # load connectivity matrix for a given area (this defines the geographic scope of simulation)
@@ -62,21 +62,21 @@ brt_mod <- readRDS("./Data/brt_mod_orekyte.rds")
 inndata <- inndata_timeslot[inndata_timeslot$waterBodyID %in% wbid_wrid$waterBodyID,]
 
 # species specific stuff
-species <- "Phoxinus phoxinus"
+species <- "Esox lucius"
 species_var <- stringr::str_replace(species," ","_") # variable describing present/absence of focal species
 temp_inc <- 0 # temperature increas
 
 # simulation and time specific stuff
 Nsims <- 200 # number of iterations
 sim_duration <- 1 # Duration of the scenario, in years (will be corced to multiple of time_slot_length)
-time_slot_length <- 10 # Duration of the time-slot, in years (time-span of each time-slot)
+time_slot_length <- 50 # Duration of the time-slot, in years (time-span of each time-slot)
 gmb_time_slot_length <- 50 # Duration of the time-slot, in years, used to estimate establishment probability
-n_time_slots <- as.integer(sim_duration/time_slot_length)
+n_time_slots <- 1#as.integer(sim_duration/time_slot_length)
 start_year <- 2017
 end_year <-2017+50
 # secondary dispersal stuff
 with_secondary <- TRUE # should secondary spread be included in simulations?
-slope_barrier <- 0.02 # max slope for migration upstream
+slope_barrier <- 700 # max slope for migration upstream
 percentage_exter <- 0.5 # Give the percentage of focal species populations one wants to exterminate before simulation  
 
 # Before each simulation run!!!! 
@@ -130,15 +130,13 @@ for(j in 1:Nsims){
       
       # select out downstream lakes that does not have species at start of time-slot
       
-      #################################################################################
-      # Stefan: hos meg ser det ut til at disse linjene stort sett ikke produserer noen flere introduserte tilfeller?
       downstream_lakes <- get_downstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid))
       # select out downstream lakes that does not have species at start of time-slot
-      downstream_lakes <- downstream_lakes[!(downstream_lakes %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1])]
+      downstream_lakes <- downstream_lakes[!(downstream_lakes$downstream_lakes %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1]),]
       
       # finally assign introduction to downstream lakes (without previous obs/intro)
-       tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% downstream_lakes,1,tmp_trans$introduced)
-      ##################################################################################
+       tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% downstream_lakes$downstream_lakes,1,tmp_trans$introduced)
+      
       #.............................................................
       # Upstream dispersal - NB! Check this part.... unequal length of upstream_lakes and upstream_slopes vector!!!!
       #.............................................................
@@ -156,11 +154,11 @@ for(j in 1:Nsims){
       # finally reachable lakes and assign introduction 
       #upstream_lakes_reachable <- na.omit(upstream_lakes[upstream_slopes<slope_barrier])
       #upstream_lakes_reachable <- unique(upstream_lakes_reachable) # introductions only listed once (remove duplicated lakeIDs)
-       upstream_lakes_reachable <- get_reachable_upstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid), slope_barrier)
-       upstream_lakes_reachable <- upstream_lakes_reachable[!(upstream_lakes_reachable %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1])]
+       #upstream_lakes_reachable <- get_reachable_upstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid), slope_barrier)
+       #upstream_lakes_reachable <- upstream_lakes_reachable[!(upstream_lakes_reachable %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1])]
        
       # add upstream_lake intros to introduced vector
-      tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% upstream_lakes_reachable,1,tmp_trans$introduced)
+      #tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% upstream_lakes_reachable,1,tmp_trans$introduced)
       
     } # end of secondary==TRUE if statement
     
@@ -168,7 +166,7 @@ for(j in 1:Nsims){
     
     # create variables to store
     intro <- tmp_trans$waterBodyID[tmp_trans$introduced==1]
-    intro_is_secondary <- ifelse(intro %in% downstream_lakes,TRUE,FALSE)
+    intro_is_secondary <- ifelse(intro %in% downstream_lakes$downstream_lakes,TRUE,FALSE)
     time_slot_i <- rep(i,length(intro))
     sim_j <- rep(j,length(intro))
     start_year_i <- rep(( start_year+((i-1)*time_slot_length) ),
@@ -238,7 +236,7 @@ tmpout[["time_slot_length"]] <- time_slot_length
 tmpout[["start_year"]] <- start_year
 
 # Write output to local disk
-url <- paste("./Data/sim_out_",species_var,"_without_extermination_scenario_agder.rds",sep="")
+url <- paste("./Data/sim_out_",species_var,"_no_extermination_scenario_only_downstream_agder.rds",sep="")
 saveRDS(tmpout,url)
 
 # write output to BOX
