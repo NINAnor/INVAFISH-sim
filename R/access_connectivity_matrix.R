@@ -122,6 +122,17 @@ ORDER BY accessible_lake ASC, likelihood DESC;", sep='')
 # Eksempel
 accessible_lakes_likelihood_pike <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]))
 
+get_reachable_lakes <- function(db_conection, waterbodyID, slope_barrier) {
+    sql_string <- paste("SELECT DISTINCT ON (accessible_lakes)
+accessible_lakes_threshold(lake, ", slope_barrier, ") AS accessible_lakes FROM (SELECT unnest(ARRAY[", toString(waterbodyID, sep=','),"]) AS lake) AS x;", sep='')
+    res <- dbGetQuery(db_conection, sql_string)
+    res
+}
+# Eksempel (get lakes with up to 7 deg. upstream slope)
+get_reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 700)
+# Eksempel (get only downstream or adjacent lakes)
+get_reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 0)
+
 
 ####################################################################################
 # Rydde opp
