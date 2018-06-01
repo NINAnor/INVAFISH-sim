@@ -129,9 +129,22 @@ accessible_lakes_threshold(lake, ", slope_barrier, ") AS accessible_lakes FROM (
     res
 }
 # Eksempel (get lakes with up to 7 deg. upstream slope)
-get_reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 700)
+reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 700)
 # Eksempel (get only downstream or adjacent lakes)
-get_reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 0)
+reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 0)
+
+# Funksjon for å hente ut spårednins-sannsynlighet for gjedde
+# Returns table with two columns "accessible_lake (waterBodyID) og sansynlighet for tilgjengelighet for gjedde (0.0 -1.0)
+get_reachable_lakes_pike <- function(db_conection, waterbodyID) {
+    sql_string <- paste("SELECT * FROM (SELECT DISTINCT ON (accessible_lake) (accessible_lakes_pike_test(lake)).* FROM 
+      (SELECT unnest(ARRAY[", toString(waterbodyID, sep=','),"]) AS lake) AS l) AS y WHERE likelihood > 0.00001;", sep='')
+    res <- dbGetQuery(db_conection, sql_string)
+    res
+}
+# Eksempel (get lakes with up to 7 deg. upstream slope)
+reachable_lakes_pike <- get_reachable_lakes_pike(con, unique(wbid_wrid[,2][1:100]))
+# Eksempel (get only downstream or adjacent lakes)
+reachable_lakes_pike <- get_reachable_lakes_pike(con, unique(wbid_wrid[,2][1:100]))
 
 
 ####################################################################################
