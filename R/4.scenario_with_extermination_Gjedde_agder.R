@@ -31,6 +31,7 @@ inndata_timeslot<-outdata_data_gjedde   #readRDS("./Data/outdata_occurence_by_ev
 source("./R/git_predict_introduction_events.R")
 source("./R/f_calc_distance.R")
 source("./R/f_postsim_processing.R")
+source("./R/git_access_connectivity_matrix2.R")
 
 # load model object used for predictions
 # Mort.... 
@@ -79,6 +80,12 @@ with_secondary <- TRUE # should secondary spread be included in simulations?
 slope_barrier <- 700 # max slope for migration upstream
 percentage_exter <- 0.5 # Give the percentage of focal species populations one wants to exterminate before simulation  
 
+# Set on or the other to true or false (for upstream dispersal). Probability is based on analyses from Sam and Stefan
+use_slope_barrier<-FALSE
+use_disp_probability<-TRUE
+
+
+
 # Before each simulation run!!!! 
 # Create new dataframe / vars for simulation bookkeeping.
 # Use latest time-slot (if multiple) in inndata
@@ -115,7 +122,7 @@ for(j in 1:Nsims){
     
     # include secondary dispeersal?
     if(with_secondary==TRUE){
-      
+      if(use_slope_barrier==TRUE){
       # get wbID from introductions in run i
       introduction_lakes <- tmp_trans[tmp_trans$introduced==1,]$waterBodyID
       introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% introduction_lakes]
@@ -154,13 +161,26 @@ for(j in 1:Nsims){
       # finally reachable lakes and assign introduction 
       #upstream_lakes_reachable <- na.omit(upstream_lakes[upstream_slopes<slope_barrier])
       #upstream_lakes_reachable <- unique(upstream_lakes_reachable) # introductions only listed once (remove duplicated lakeIDs)
-       #upstream_lakes_reachable <- get_reachable_upstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid), slope_barrier)
-       #upstream_lakes_reachable <- upstream_lakes_reachable[!(upstream_lakes_reachable %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1])]
+      
+      ##Use a predefined slope barrier...
+        
+       upstream_lakes_reachable <- get_reachable_upstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid), slope_barrier)
+      # select out upstream lakes that does not have species at start of time-slot
+      upstream_lakes_reachable <- upstream_lakes_reachable[!(upstream_lakes_reachable$upstream_lake %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1]),]
        
       # add upstream_lake intros to introduced vector
-      #tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% upstream_lakes_reachable,1,tmp_trans$introduced)
-      
-    } # end of secondary==TRUE if statement
+      tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% upstream_lakes_reachable$upstream_lake,1,tmp_trans$introduced)
+        }
+      ##..or dispersal probability based on analyses from Sam and Stefan
+       if(use_disp_probability==TRUE){
+         lakes_reachable <-get_reachable_lakes_pike(con,unique(introduction_lakes))
+         # select out upstream lakes that does not have species at start of time-slot
+         lakes_reachable <- lakes_reachable[!(lakes_reachable$accessible_lake %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1]),]
+         # add lake intros to introduced vector, based on probability
+         tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% lakes_reachable$accessible_lake,rbinom(length(tmp_trans$waterBodyID), size = 1, prob=lakes_reachable$likelihood),tmp_trans$introduced)
+       }    
+         
+         } # end of secondary==TRUE if statement
     
     ### Store output from time-period i, simulationrun j
     
@@ -236,7 +256,7 @@ tmpout[["time_slot_length"]] <- time_slot_length
 tmpout[["start_year"]] <- start_year
 
 # Write output to local disk
-url <- paste("./Data/sim_out_",species_var,"_no_extermination_scenario_only_downstream_agder.rds",sep="")
+url <- paste("./Data/sim_out_",species_var,"_no_extermination_scenario_test_probabilities_w_wrid_255945.rds",sep="")
 saveRDS(tmpout,url)
 
 # write output to BOX
@@ -253,6 +273,6 @@ dbWriteTable(con, name=paste(nameOfTable), value=dataToWrite,overwrite=TRUE)
 
 #dbWriteTable(con, c("temporary_agder", "sim_agder_output_esox_lucius"), as.data.frame(sim_output_lake))
 
-# Rydde opp i forbindelse mot 
+# Rydde opp i forbindelse mot server 
 poolReturn(con)
 poolClose(pool)
