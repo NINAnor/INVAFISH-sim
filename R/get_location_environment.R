@@ -32,4 +32,4 @@ get_location_environment <- function(db_conection) {
   res
 }
 # Eksempel
-loc_env <- get_location_environmen(con)
+loc_env <- get_location_environment(con)
