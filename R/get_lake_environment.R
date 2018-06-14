@@ -1,0 +1,35 @@
+# Dette er bare et eksempel
+
+library(RPostgreSQL)
+library(pool)
+
+#Set connection parameters
+pg_drv <- RPostgreSQL::PostgreSQL()
+pg_host <- "vm-srv-finstad.vm.ntnu.no"
+pg_db <- 'nofa'
+pg_user <- rstudioapi::askForPassword("enter username")
+pg_password <- rstudioapi::askForPassword("enter psw")
+
+
+pool <- dbPool(
+  drv = pg_drv,
+  dbname = pg_db,
+  host = pg_host,
+  user = pg_user,
+  password = pg_password,
+  idleTimeout = 36000000
+)
+
+con <- poolCheckout(pool)
+
+####################################################################################
+# Nå
+
+### Hent ut miljødata for alle innsjøer i Agder
+get_lake_environment <- function(db_conection, waterBodyIDs) {
+  sql_string <- paste("SELECT * FROM nofa.view_lake_environment AS a WHERE \"waterBodyID\" IN (", toString(waterBodyIDs, sep=','), ");", sep='')
+  res <- dbGetQuery(db_conection, sql_string)
+  res
+}
+# Eksempel
+lake_env <- get_lake_environment(con, wbids)
