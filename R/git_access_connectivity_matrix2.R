@@ -133,6 +133,41 @@ get_reachable_lakes <- function(db_conection, waterbodyID, slope_barrier) {
 # Eksempel (get only downstream or adjacent lakes)
 #reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 0)
 
+get_reachable_lakes_wrid <- function(db_conection, wrid, waterbodyID, slope_barrier) {
+  sql_string <- paste(
+"--SELECT count(acclake), acclake FROM (
+SELECT l.to_lake AS acclake
+ -- , CASE WHEN l.upstream_slope_max_max <= 0 THEN CAST(0 AS smallint)
+ -- ELSE l.upstream_slope_max_max END AS slope
+ -- , CASE
+ -- WHEN l.downstream_slope_max_max <= 0 AND l.upstream_slope_max_max > 0 THEN CAST(''upstreams'' AS character varying(25))
+ -- WHEN l.upstream_slope_max_max <= 0 AND l.downstream_slope_max_max > 0 THEN CAST(''downstreams'' AS character varying(25))
+ -- ELSE CAST(''up/-donwstreams'' AS character varying(25)) END AS type
+FROM agder_lake_connectivity.lake_connectivity_", wrid, " AS l
+WHERE l.wrid = ", wrid, " AND
+l.from_lake IN (", toString(waterbodyID, sep=','), ") AND l.upstream_slope_max_max <= ", slope_barrier, "
+UNION ALL
+SELECT l.from_lake AS acclake
+ -- , CASE WHEN l.upstream_slope_max_max <= 0 THEN CAST(0 AS smallint)
+ -- ELSE l.upstream_slope_max_max END AS slope
+ -- , CASE
+ -- WHEN l.downstream_slope_max_max <= 0 AND l.upstream_slope_max_max > 0 THEN CAST(''upstreams'' AS character varying(25))
+ -- WHEN l.upstream_slope_max_max <= 0 AND l.downstream_slope_max_max > 0 THEN CAST(''downstreams'' AS character varying(25))
+ -- ELSE CAST(''up/-donwstreams'' AS character varying(25)) END AS type
+FROM agder_lake_connectivity.lake_connectivity_", wrid, " AS l
+WHERE l.wrid = ", wrid, " AND
+l.to_lake IN (", toString(waterbodyID, sep=','), ") AND l.downstream_slope_max_max <= ", slope_barrier, "
+--) AS y
+--GROUP BY acclake
+;"  
+  , sep='')
+  res <- dbGetQuery(db_conection, sql_string)
+  res
+}
+
+# Example
+# rl <- get_reachable_lakes_wrid(con, 246992, wbid_wrid[,1][wbid_wrid[,2] == 246992][1:100], 700)
+
 # Funksjon for å hente ut spårednins-sannsynlighet for gjedde
 # Returns table with two columns "accessible_lake (waterBodyID) og sansynlighet for tilgjengelighet for gjedde (0.0 -1.0)
 get_reachable_lakes_pike <- function(db_conection, waterbodyID) {
