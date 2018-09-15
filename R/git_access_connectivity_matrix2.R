@@ -30,7 +30,7 @@ library(pool)
 
 #Set connection parameters
 pg_drv <- RPostgreSQL::PostgreSQL()
-pg_host <- "vm-srv-finstad.vm.ntnu.no"
+pg_host <- "vm-srv-wallace.vm.ntnu.no"
 pg_db <- 'nofa'
 pg_user <- rstudioapi::askForPassword("enter username")
 pg_password <- rstudioapi::askForPassword("enter psw")
@@ -72,7 +72,7 @@ wbid_wrid <- get_wbid_wrid(con, wrids)
 get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
   sql_string <- paste("SET constraint_exclusion = on;
                       SELECT \"lakeID\" AS  \"waterBodyID\", CAST(unnest(string_to_array(downstream_lakes, ',')) AS integer) AS downstream_lakes FROM
-                      connectivity_connectivity.lake_connectivity_summary WHERE 
+                      agder.lake_connectivity_summary WHERE 
                       wrid IN (", toString(eb_waterregionID, sep=','), ") AND
                       \"lakeID\" IN (", toString(waterbodyID, sep=','),");", sep='')
   res <- dbGetQuery(db_conection, sql_string)
@@ -88,7 +88,7 @@ get_reachable_upstream_lakes <- function(db_conection, waterbodyID, eb_waterregi
                       SELECT
                       from_lake AS source_lake, to_lake AS upstream_lake
                       FROM
-                      connectivity_connectivity.lake_connectivity
+                      agder.lake_connectivity
                       WHERE
                       wrid in (", toString(eb_waterregionID, sep=','), ") AND
                       from_lake in (", toString(waterbodyID, sep=','), ") AND
@@ -96,7 +96,7 @@ get_reachable_upstream_lakes <- function(db_conection, waterbodyID, eb_waterregi
                       UNION ALL SELECT
                       from_lake AS source_lake, to_lake AS upstream_lake
                       FROM
-                      connectivity_connectivity.lake_connectivity
+                      agder.lake_connectivity
                       WHERE
                       wrid in (", toString(eb_waterregionID, sep=','),") AND
                       to_lake in (", toString(waterbodyID, sep=','),") AND
@@ -143,7 +143,7 @@ SELECT l.to_lake AS acclake
  -- WHEN l.downstream_slope_max_max <= 0 AND l.upstream_slope_max_max > 0 THEN CAST(''upstreams'' AS character varying(25))
  -- WHEN l.upstream_slope_max_max <= 0 AND l.downstream_slope_max_max > 0 THEN CAST(''downstreams'' AS character varying(25))
  -- ELSE CAST(''up/-donwstreams'' AS character varying(25)) END AS type
-FROM agder_lake_connectivity.lake_connectivity_", wrid, " AS l
+FROM agder.lake_connectivity_", wrid, " AS l
 WHERE l.wrid = ", wrid, " AND
 l.from_lake IN (", toString(waterbodyID, sep=','), ") AND l.upstream_slope_max_max <= ", slope_barrier, "
 UNION ALL
@@ -154,7 +154,7 @@ SELECT l.from_lake AS acclake
  -- WHEN l.downstream_slope_max_max <= 0 AND l.upstream_slope_max_max > 0 THEN CAST(''upstreams'' AS character varying(25))
  -- WHEN l.upstream_slope_max_max <= 0 AND l.downstream_slope_max_max > 0 THEN CAST(''downstreams'' AS character varying(25))
  -- ELSE CAST(''up/-donwstreams'' AS character varying(25)) END AS type
-FROM agder_lake_connectivity.lake_connectivity_", wrid, " AS l
+FROM agder.lake_connectivity_", wrid, " AS l
 WHERE l.wrid = ", wrid, " AND
 l.to_lake IN (", toString(waterbodyID, sep=','), ") AND l.downstream_slope_max_max <= ", slope_barrier, "
 --) AS y
