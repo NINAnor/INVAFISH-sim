@@ -30,7 +30,7 @@ library(pool)
 
 #Set connection parameters
 pg_drv <- RPostgreSQL::PostgreSQL()
-pg_host <- "vm-srv-finstad.vm.ntnu.no"
+pg_host <- "vm-srv-wallace.vm.ntnu.no"
 pg_db <- 'nofa'
 pg_user <- rstudioapi::askForPassword("enter username")
 pg_password <- rstudioapi::askForPassword("enter psw")
@@ -70,9 +70,8 @@ wbid_wrid <- get_wbid_wrid(con, wrids)
 
 ### Hent ut data frame med unike kombinasjon av waterbodyID (kolonne 1) og id for innsjøer som ligger nedstrøms (kolonne 2)
 get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
-  sql_string <- paste("SET constraint_exclusion = on;
-                      SELECT \"lakeID\" AS  \"waterBodyID\", CAST(unnest(string_to_array(downstream_lakes, ',')) AS integer) AS downstream_lakes FROM
-                      connectivity_connectivity.lake_connectivity_summary WHERE 
+  sql_string <- paste("SELECT \"lakeID\" AS  \"waterBodyID\", CAST(unnest(string_to_array(downstream_lakes, ',')) AS integer) AS downstream_lakes FROM
+                      agder.lake_connectivity_summary WHERE 
                       wrid IN (", toString(eb_waterregionID, sep=','), ") AND
                       \"lakeID\" IN (", toString(waterbodyID, sep=','),");", sep='')
   res <- dbGetQuery(db_conection, sql_string)
@@ -88,7 +87,7 @@ get_reachable_upstream_lakes <- function(db_conection, waterbodyID, eb_waterregi
                       SELECT
                       from_lake AS source_lake, to_lake AS upstream_lake
                       FROM
-                     connectivity_connectivity.lake_connectivity
+                     agder.lake_connectivity
                       WHERE
                       wrid in (", toString(eb_waterregionID, sep=','), ") AND
                       from_lake in (", toString(waterbodyID, sep=','), ") AND
@@ -96,7 +95,7 @@ get_reachable_upstream_lakes <- function(db_conection, waterbodyID, eb_waterregi
                       UNION ALL SELECT
                       from_lake AS source_lake, to_lake AS upstream_lake
                       FROM
-                      connectivity_connectivity.lake_connectivity
+                      agder.lake_connectivity
                       WHERE
                       wrid in (", toString(eb_waterregionID, sep=','),") AND
                       to_lake in (", toString(waterbodyID, sep=','),") AND
