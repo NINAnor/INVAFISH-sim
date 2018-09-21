@@ -143,7 +143,7 @@ SELECT l.to_lake AS acclake
  -- WHEN l.downstream_slope_max_max <= 0 AND l.upstream_slope_max_max > 0 THEN CAST(''upstreams'' AS character varying(25))
  -- WHEN l.upstream_slope_max_max <= 0 AND l.downstream_slope_max_max > 0 THEN CAST(''downstreams'' AS character varying(25))
  -- ELSE CAST(''up/-donwstreams'' AS character varying(25)) END AS type
-FROM agder.lake_connectivity_", wrid, " AS l
+FROM agder.lake_connectivity AS l
 WHERE l.wrid = ", wrid, " AND
 l.from_lake IN (", toString(waterbodyID, sep=','), ") AND l.upstream_slope_max_max <= ", slope_barrier, "
 UNION ALL
@@ -154,7 +154,7 @@ SELECT l.from_lake AS acclake
  -- WHEN l.downstream_slope_max_max <= 0 AND l.upstream_slope_max_max > 0 THEN CAST(''upstreams'' AS character varying(25))
  -- WHEN l.upstream_slope_max_max <= 0 AND l.downstream_slope_max_max > 0 THEN CAST(''downstreams'' AS character varying(25))
  -- ELSE CAST(''up/-donwstreams'' AS character varying(25)) END AS type
-FROM agder.lake_connectivity_", wrid, " AS l
+FROM agder.lake_connectivity AS l
 WHERE l.wrid = ", wrid, " AND
 l.to_lake IN (", toString(waterbodyID, sep=','), ") AND l.downstream_slope_max_max <= ", slope_barrier, "
 --) AS y
