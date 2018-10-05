@@ -1,11 +1,9 @@
-# Dette er bare et eksempel
-
 library(RPostgreSQL)
 library(pool)
 
 #Set connection parameters
 pg_drv <- RPostgreSQL::PostgreSQL()
-pg_host <- "vm-srv-finstad.vm.ntnu.no"
+pg_host <- "vm-srv-wallace.vm.ntnu.no"
 pg_db <- 'nofa'
 pg_user <- rstudioapi::askForPassword("enter username")
 pg_password <- rstudioapi::askForPassword("enter psw")
@@ -23,9 +21,9 @@ pool <- dbPool(
 con <- poolCheckout(pool)
 
 ####################################################################################
-# NÃ¥
+# Nå
 
-### Hent ut miljÃ¸data for alle innsjÃ¸er i Agder
+### Hent ut miljødata for alle innsjøer i Agder
 get_lake_environment <- function(db_conection, waterBodyIDs) {
   sql_string <- paste("SELECT * FROM nofa.view_lake_environment AS a WHERE \"waterBodyID\" IN (", toString(waterBodyIDs, sep=','), ");", sep='')
   res <- dbGetQuery(db_conection, sql_string)

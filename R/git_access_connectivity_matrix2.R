@@ -1,4 +1,4 @@
-# FÃ¸r
+# Før
 # # get vector of wbID for upstream lakes 
 # upstream_lakes <- connectivity$upstream_lakes[connectivity$waterBodyID %in% introduction_lakes]      
 # upstream_lakes <- paste(upstream_lakes,sep=",",collapse=",")
@@ -47,10 +47,11 @@ pool <- dbPool(
 
 con <- poolCheckout(pool)
 
-####################################################################################
-# NÃ¥
 
-### Hent ut alle vannregioner (for Agder (mange inneholder ingen innsjÃ¸er)
+####################################################################################
+# Nå
+
+### Hent ut alle vannregioner (for Agder (mange inneholder ingen innsjøer)
 get_wrids <- function(db_conection) {
   sql_string <- "SELECT DISTINCT ON (a.gid) a.gid AS wrid FROM \"Hydrography\".\"waterregions_dem_10m_nosefi\" AS a, (SELECT geom FROM \"AdministrativeUnits\".\"Fenoscandia_Municipality_polygon\" WHERE county IN ('Vest-Agder', 'Aust-Agder')) AS b WHERE ST_Intersects(a.geom, b.geom);"
   res <- dbGetQuery(db_conection, sql_string)[,1]
@@ -59,7 +60,7 @@ get_wrids <- function(db_conection) {
 # Eksempel
 wrids <- get_wrids(con)
 
-### Hent ut data frame med kombinasjon av waterbodyID for alle innsjÃ¸er (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsjÃ¸er)
+### Hent ut data frame med kombinasjon av waterbodyID for alle innsjøer (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsjøer)
 get_wbid_wrid <- function(db_conection, eb_waterregionID) {
   sql_string <- paste("SELECT id AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE ecco_biwa_wr IN (", toString(eb_waterregionID, sep=','), ")", sep='')
   res <- dbGetQuery(db_conection, sql_string)
@@ -68,7 +69,7 @@ get_wbid_wrid <- function(db_conection, eb_waterregionID) {
 # Eksempel
 wbid_wrid <- get_wbid_wrid(con, wrids)
 
-### Hent ut data frame med unike kombinasjon av waterbodyID (kolonne 1) og id for innsjÃ¸er som ligger nedstrÃ¸ms (kolonne 2)
+### Hent ut data frame med unike kombinasjon av waterbodyID (kolonne 1) og id for innsjøer som ligger nedstrøms (kolonne 2)
 get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
   sql_string <- paste("SET constraint_exclusion = on;
                       SELECT \"lakeID\" AS  \"waterBodyID\", CAST(unnest(string_to_array(downstream_lakes, ',')) AS integer) AS downstream_lakes FROM
@@ -82,7 +83,7 @@ get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
 #downstream_lakes <- get_downstream_lakes(con, unique(wbid_wrid[,1][1:100]), unique(wbid_wrid[,2][1:100]))
 
 
-### Hent ut data frame med kombinasjon av waterbodyID (kolonne 1) og id for innsjÃ¸er som ligger oppstÃ¸ms og der skrÃ¥ning i forbindelsen er lavere enn slope_barrier (kolonne 2)
+### Hent ut data frame med kombinasjon av waterbodyID (kolonne 1) og id for innsjøer som ligger oppstøms og der skråning i forbindelsen er lavere enn slope_barrier (kolonne 2)
 get_reachable_upstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID, slope_barrier) {
   sql_string <- paste("SET constraint_exclusion = on;
                       SELECT
@@ -132,35 +133,34 @@ get_reachable_lakes <- function(db_conection, waterbodyID, slope_barrier) {
 #reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 700)
 # Eksempel (get only downstream or adjacent lakes)
 #reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 0)
-
 get_reachable_lakes_wrid <- function(db_conection, wrid, waterbodyID, slope_barrier) {
   sql_string <- paste(
-"--SELECT count(acclake), acclake FROM (
-SELECT l.to_lake AS acclake
- -- , CASE WHEN l.upstream_slope_max_max <= 0 THEN CAST(0 AS smallint)
- -- ELSE l.upstream_slope_max_max END AS slope
- -- , CASE
- -- WHEN l.downstream_slope_max_max <= 0 AND l.upstream_slope_max_max > 0 THEN CAST(''upstreams'' AS character varying(25))
- -- WHEN l.upstream_slope_max_max <= 0 AND l.downstream_slope_max_max > 0 THEN CAST(''downstreams'' AS character varying(25))
- -- ELSE CAST(''up/-donwstreams'' AS character varying(25)) END AS type
-FROM agder.lake_connectivity AS l
-WHERE l.wrid = ", wrid, " AND
-l.from_lake IN (", toString(waterbodyID, sep=','), ") AND l.upstream_slope_max_max <= ", slope_barrier, "
-UNION ALL
-SELECT l.from_lake AS acclake
- -- , CASE WHEN l.upstream_slope_max_max <= 0 THEN CAST(0 AS smallint)
- -- ELSE l.upstream_slope_max_max END AS slope
- -- , CASE
- -- WHEN l.downstream_slope_max_max <= 0 AND l.upstream_slope_max_max > 0 THEN CAST(''upstreams'' AS character varying(25))
- -- WHEN l.upstream_slope_max_max <= 0 AND l.downstream_slope_max_max > 0 THEN CAST(''downstreams'' AS character varying(25))
- -- ELSE CAST(''up/-donwstreams'' AS character varying(25)) END AS type
-FROM agder.lake_connectivity AS l
-WHERE l.wrid = ", wrid, " AND
-l.to_lake IN (", toString(waterbodyID, sep=','), ") AND l.downstream_slope_max_max <= ", slope_barrier, "
---) AS y
---GROUP BY acclake
-;"  
-  , sep='')
+    "--SELECT count(acclake), acclake FROM (
+    SELECT l.to_lake AS acclake
+    -- , CASE WHEN l.upstream_slope_max_max <= 0 THEN CAST(0 AS smallint)
+    -- ELSE l.upstream_slope_max_max END AS slope
+    -- , CASE
+    -- WHEN l.downstream_slope_max_max <= 0 AND l.upstream_slope_max_max > 0 THEN CAST(''upstreams'' AS character varying(25))
+    -- WHEN l.upstream_slope_max_max <= 0 AND l.downstream_slope_max_max > 0 THEN CAST(''downstreams'' AS character varying(25))
+    -- ELSE CAST(''up/-donwstreams'' AS character varying(25)) END AS type
+    FROM agder.lake_connectivity AS l
+    WHERE l.wrid = ", wrid, " AND
+    l.from_lake IN (", toString(waterbodyID, sep=','), ") AND l.upstream_slope_max_max <= ", slope_barrier, "
+    UNION ALL
+    SELECT l.from_lake AS acclake
+    -- , CASE WHEN l.upstream_slope_max_max <= 0 THEN CAST(0 AS smallint)
+    -- ELSE l.upstream_slope_max_max END AS slope
+    -- , CASE
+    -- WHEN l.downstream_slope_max_max <= 0 AND l.upstream_slope_max_max > 0 THEN CAST(''upstreams'' AS character varying(25))
+    -- WHEN l.upstream_slope_max_max <= 0 AND l.downstream_slope_max_max > 0 THEN CAST(''downstreams'' AS character varying(25))
+    -- ELSE CAST(''up/-donwstreams'' AS character varying(25)) END AS type
+    FROM agder.lake_connectivity AS l
+    WHERE l.wrid = ", wrid, " AND
+    l.to_lake IN (", toString(waterbodyID, sep=','), ") AND l.downstream_slope_max_max <= ", slope_barrier, "
+    --) AS y
+    --GROUP BY acclake
+    ;"  
+    , sep='')
   res <- dbGetQuery(db_conection, sql_string)
   res
 }
@@ -168,7 +168,7 @@ l.to_lake IN (", toString(waterbodyID, sep=','), ") AND l.downstream_slope_max_m
 # Example
 # rl <- get_reachable_lakes_wrid(con, 246992, wbid_wrid[,1][wbid_wrid[,2] == 246992][1:100], 700)
 
-# Funksjon for Ã¥ hente ut spÃ¥rednins-sannsynlighet for gjedde
+# Funksjon for å hente ut spårednins-sannsynlighet for gjedde
 # Returns table with two columns "accessible_lake (waterBodyID) og sansynlighet for tilgjengelighet for gjedde (0.0 -1.0)
 get_reachable_lakes_pike <- function(db_conection, waterbodyID) {
   sql_string <- paste("SELECT * FROM (SELECT DISTINCT ON (accessible_lake) (accessible_lakes_pike_test(lake)).* FROM 

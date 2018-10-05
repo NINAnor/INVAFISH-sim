@@ -1,5 +1,3 @@
-# Dette er bare et eksempel
-
 library(RPostgreSQL)
 library(pool)
 
@@ -23,13 +21,13 @@ pool <- dbPool(
 con <- poolCheckout(pool)
 
 ####################################################################################
-# NÃ¥
+# Nå
 
-### Hent ut miljÃ¸data for alle innsjÃ¸er i Agder
+### Hent ut miljødata for alle innsjøer i Agder
 get_location_environment <- function(db_conection) {
   sql_string <- "SELECT * FROM nofa.view_location_environment AS a WHERE county IN ('Vest-Agder', 'Aust-Agder');"
   res <- dbGetQuery(db_conection, sql_string)
   res
 }
 # Eksempel
-loc_env <- get_location_environment(con)
+#loc_env <- get_location_environment(con)
