@@ -37,10 +37,17 @@ source("./R/f_postsim_processing.R")
 
 inndata_timeslot<-outdata_data_gjedde #Fra eksempel i wrangle.r, må være spesifikk for hver art. Gir bare vann med fiskedata.
 #loc_env <- get_location_environment(con) # Henter alle vann definert i funksjonen, også vann uten fiskedata
-lake_env <- get_lake_environment(con, wbid_wrid$waterBodyID)
+lake_env <-get_lake_environment(con, wbid_wrid$waterBodyID)
 #add species to new loc_env dataframe based on outdata_data_gjedde
+
 lake_env$Esox_lucius<-inndata_timeslot$Esox_lucius[match(as.numeric(lake_env$waterBodyID), inndata_timeslot$waterBodyID)]
 lake_env$Esox_lucius[is.na(lake_env$Esox_lucius)] <- 0
+
+
+#add n_pop (number of population with pike within 5000M)
+lake_env$n_pop<-0
+lake_env$n_pop<-ifelse(lake_env$waterBodyID %in% geoselect_no_gjedde_pop_5000$waterBodyID,geoselect_no_gjedde_pop_5000$count,lake_env$n_pop)
+
 
 #add recalculated closest distance based on new data
 species <- "Esox lucius"
@@ -55,7 +62,7 @@ lake_env$dist_to_closest_pop<-log(a$dist_to_closest_pop)
 #tmpdata2 <- tempfile()
 #download.file(url="https://ntnu.box.com/shared/static/ftt7twf3fhdbm4izei0qktj382do3bx8.rds",
 #              destfile=tmpdata2)
-brt_mod <- readRDS("./Data/brt_mod_gjedde.rds")
+brt_mod <- readRDS("./Data/brt_mod_agder_gjedde.rds")
 
 
 # load connectivity matrix for a given area (this defines the geographic scope of simulation)
@@ -85,7 +92,7 @@ species_var <- stringr::str_replace(species," ","_") # variable describing prese
 temp_inc <- 0 # temperature increas
 
 # simulation and time specific stuff
-Nsims <- 200 # number of iterations
+Nsims <- 5 # number of iterations
 sim_duration <- 1 # Duration of the scenario, in years (will be corced to multiple of time_slot_length)
 time_slot_length <- 50 # Duration of the time-slot, in years (time-span of each time-slot)
 gmb_time_slot_length <- 50 # Duration of the time-slot, in years, used to estimate establishment probability
@@ -142,7 +149,8 @@ for(j in 1:Nsims){
       
       # get wbID from introductions in run i
       introduction_lakes <- tmp_trans[tmp_trans$introduced==1,]$waterBodyID
-      introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% introduction_lakes]
+      pike_lakes<- tmp_trans$waterBodyID[tmp_trans[species_var]==1]
+      introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% pike_lakes]
       introduction_lakes <- introduction_lakes[!is.na(introduction_lakes)]
       #.............................................................
       # Downstream dispersal
@@ -155,7 +163,7 @@ for(j in 1:Nsims){
       
       # select out downstream lakes that does not have species at start of time-slot
       if(use_slope_barrier==TRUE){
-      reachable_lakes_pike <- get_reachable_lakes_wrid(con,introduction_wrid, unique(introduction_lakes),slope_barrier)
+      reachable_lakes_pike <- get_reachable_lakes_wrid(con,introduction_wrid, unique(pike_lakes),slope_barrier)
       
       #downstream_lakes <- get_downstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid))
       # select out downstream lakes that does not have species at start of time-slot
@@ -277,7 +285,7 @@ tmpout[["time_slot_length"]] <- time_slot_length
 tmpout[["start_year"]] <- start_year
 
 # Write output to local disk
-url <- paste("./Data/sim_out_",species_var,"_no_extermination_scenario_test_probabilities_w_wrid_255945&269096.rds",sep="")
+url <- paste("./Data/sim_out_",species_var,"_agder_5simu.rds",sep="")
 saveRDS(tmpout,url)
 
 # write output to BOX
@@ -287,13 +295,15 @@ box_ul(dir_id = 29103527607, file = paste("./Data/sim_out_",species_var,".rds",s
 
 # Write lake-specific summary to database 
 dataToWrite <- sim_output_lake
-nameOfTable <- tolower(paste("sim_output_",species_var,"_no_extermination_scenario",sep=""))
-f_write_simresult_to_db(dataToWrite=sim_output_lake,nameOfTable)
+#nameOfTable <- tolower(paste("sim_output_",species_var,"_no_extermination_scenario",sep=""))
+#f_write_simresult_to_db(dataToWrite=sim_output_lake,nameOfTable)
 
-dbWriteTable(con, name=paste(nameOfTable), value=dataToWrite,overwrite=TRUE)
+
+dbWriteTable(con, c("agder", "Sim_out_lake_no_ext_5simu_new"), value=dataToWrite,overwrite=TRUE)
 
 #dbWriteTable(con, c("temporary_agder", "sim_agder_output_esox_lucius"), as.data.frame(sim_output_lake))
 
 # Rydde opp i forbindelse mot server 
 poolReturn(con)
 poolClose(pool)
+
