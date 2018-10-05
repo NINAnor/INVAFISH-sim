@@ -10,12 +10,12 @@ f_sim_output_lake <- function(sim_output,inndata_sim1,Nsims){
   require(dplyr)
   sim_output_lake <- sim_output %>% 
     group_by(intro) %>%
-    summarize(n_intro=n()) %>%
+    summarize(n_intro=n(),intro_is_secondary=tail(names(sort(table(intro_is_secondary))),1)) %>%
     rename(waterBodyID=intro)
-  sim_output_lake$p_intro <- sim_output_lake$n_intro / Nsims
-  sim_output_lake <- left_join(inndata_sim1[c("waterBodyID","decimalLongitude","decimalLatitude")], 
-                               sim_output_lake,by="waterBodyID") %>%
-    rename(lat=decimalLatitude,long=decimalLongitude)
+  sim_output_lake$p_intro <- sim_output_lake$n_intro / (Nsims*n_time_slots)
+  sim_output_lake <- left_join(inndata_sim1[c("waterBodyID","utm_x","utm_y")], 
+                               sim_output_lake,by="waterBodyID")# %>%
+    #rename(lat=decimalLatitude,long=decimalLongitude)
   sim_output_lake$p_intro[is.na(sim_output_lake$p_intro)] <- 0
   sim_output_lake$n_intro[is.na(sim_output_lake$n_intro)] <- 0
   return(sim_output_lake)
