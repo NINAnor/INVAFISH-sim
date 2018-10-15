@@ -1,29 +1,29 @@
-# Før
-# # get vector of wbID for upstream lakes 
-# upstream_lakes <- connectivity$upstream_lakes[connectivity$waterBodyID %in% introduction_lakes]      
+# F?r
+# # get vector of wbID for upstream lakes
+# upstream_lakes <- connectivity$upstream_lakes[connectivity$waterBodyID %in% introduction_lakes]
 # upstream_lakes <- paste(upstream_lakes,sep=",",collapse=",")
 # upstream_lakes <- as.numeric(unlist(strsplit(upstream_lakes,split=",")))
-# # get vector of upstream slopes 
+# # get vector of upstream slopes
 # upstream_slopes <- connectivity$upstream_lakes_slope_max_max[connectivity$waterBodyID %in% introduction_lakes]
 # upstream_slopes <- paste(upstream_slopes,sep=",",collapse=",")
 # upstream_slopes <- unlist(strsplit(upstream_slopes,split=","))
 # upstream_slopes <- gsub(" ","",upstream_slopes)
 # upstream_slopes <- as.numeric(upstream_slopes)
 
-# # finally reachable lakes and assign introduction 
+# # finally reachable lakes and assign introduction
 # upstream_lakes_reachable <- na.omit(upstream_lakes[upstream_slopes<slope_barrier])
 # upstream_lakes_reachable <- unique(upstream_lakes_reachable) # introductions only listed once (remove duplicated lakeIDs)
 
 # SELECT
 # *
-# FROM 
-# temporary_agder_connectivity.lake_connectivity_summary WHERE 
+# FROM
+# temporary_agder_connectivity.lake_connectivity_summary WHERE
 
 
 ####################################################################################
 # Sette opp en test case
 
-slope_barrirer <- 0.01
+slope_barrirer <- 700
 
 library(RPostgreSQL)
 library(pool)
@@ -49,9 +49,9 @@ con <- poolCheckout(pool)
 
 
 ####################################################################################
-# Nå
+# N?
 
-### Hent ut alle vannregioner (for Agder (mange inneholder ingen innsjøer)
+### Hent ut alle vannregioner (for Agder (mange inneholder ingen innsj?er)
 get_wrids <- function(db_conection) {
   sql_string <- "SELECT DISTINCT ON (a.gid) a.gid AS wrid FROM \"Hydrography\".\"waterregions_dem_10m_nosefi\" AS a, (SELECT geom FROM \"AdministrativeUnits\".\"Fenoscandia_Municipality_polygon\" WHERE county IN ('Vest-Agder', 'Aust-Agder')) AS b WHERE ST_Intersects(a.geom, b.geom);"
   res <- dbGetQuery(db_conection, sql_string)[,1]
@@ -60,7 +60,7 @@ get_wrids <- function(db_conection) {
 # Eksempel
 wrids <- get_wrids(con)
 
-### Hent ut data frame med kombinasjon av waterbodyID for alle innsjøer (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsjøer)
+### Hent ut data frame med kombinasjon av waterbodyID for alle innsj?er (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsj?er)
 get_wbid_wrid <- function(db_conection, eb_waterregionID) {
   sql_string <- paste("SELECT id AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE ecco_biwa_wr IN (", toString(eb_waterregionID, sep=','), ")", sep='')
   res <- dbGetQuery(db_conection, sql_string)
@@ -69,11 +69,11 @@ get_wbid_wrid <- function(db_conection, eb_waterregionID) {
 # Eksempel
 wbid_wrid <- get_wbid_wrid(con, wrids)
 
-### Hent ut data frame med unike kombinasjon av waterbodyID (kolonne 1) og id for innsjøer som ligger nedstrøms (kolonne 2)
+### Hent ut data frame med unike kombinasjon av waterbodyID (kolonne 1) og id for innsj?er som ligger nedstr?ms (kolonne 2)
 get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
   sql_string <- paste("SET constraint_exclusion = on;
                       SELECT \"lakeID\" AS  \"waterBodyID\", CAST(unnest(string_to_array(downstream_lakes, ',')) AS integer) AS downstream_lakes FROM
-                      agder.lake_connectivity_summary WHERE 
+                      agder.lake_connectivity_summary WHERE
                       wrid IN (", toString(eb_waterregionID, sep=','), ") AND
                       \"lakeID\" IN (", toString(waterbodyID, sep=','),");", sep='')
   res <- dbGetQuery(db_conection, sql_string)
@@ -83,7 +83,7 @@ get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
 #downstream_lakes <- get_downstream_lakes(con, unique(wbid_wrid[,1][1:100]), unique(wbid_wrid[,2][1:100]))
 
 
-### Hent ut data frame med kombinasjon av waterbodyID (kolonne 1) og id for innsjøer som ligger oppstøms og der skråning i forbindelsen er lavere enn slope_barrier (kolonne 2)
+### Hent ut data frame med kombinasjon av waterbodyID (kolonne 1) og id for innsj?er som ligger oppst?ms og der skr?ning i forbindelsen er lavere enn slope_barrier (kolonne 2)
 get_reachable_upstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID, slope_barrier) {
   sql_string <- paste("SET constraint_exclusion = on;
                       SELECT
@@ -159,7 +159,7 @@ get_reachable_lakes_wrid <- function(db_conection, wrid, waterbodyID, slope_barr
     l.to_lake IN (", toString(waterbodyID, sep=','), ") AND l.downstream_slope_max_max <= ", slope_barrier, "
     --) AS y
     --GROUP BY acclake
-    ;"  
+    ;"
     , sep='')
   res <- dbGetQuery(db_conection, sql_string)
   res
@@ -168,10 +168,10 @@ get_reachable_lakes_wrid <- function(db_conection, wrid, waterbodyID, slope_barr
 # Example
 # rl <- get_reachable_lakes_wrid(con, 246992, wbid_wrid[,1][wbid_wrid[,2] == 246992][1:100], 700)
 
-# Funksjon for å hente ut spårednins-sannsynlighet for gjedde
+# Funksjon for ? hente ut sp?rednins-sannsynlighet for gjedde
 # Returns table with two columns "accessible_lake (waterBodyID) og sansynlighet for tilgjengelighet for gjedde (0.0 -1.0)
 get_reachable_lakes_pike <- function(db_conection, waterbodyID) {
-  sql_string <- paste("SELECT * FROM (SELECT DISTINCT ON (accessible_lake) (accessible_lakes_pike_test(lake)).* FROM 
+  sql_string <- paste("SELECT * FROM (SELECT DISTINCT ON (accessible_lake) (accessible_lakes_pike_test(lake)).* FROM
                       (SELECT unnest(ARRAY[", toString(waterbodyID, sep=','),"]) AS lake) AS l) AS y WHERE likelihood > 0.00001;", sep='')
   res <- dbGetQuery(db_conection, sql_string)
   res
