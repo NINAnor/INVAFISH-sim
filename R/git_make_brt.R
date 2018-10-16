@@ -7,12 +7,12 @@
 #' Given care in the model-fittingg, brt can give predictive advantages over methods as e.g. glm or gam.
 #' The following script uses the dismo and gmb packages to optimise a brt model for the given species.
 #' Analytically, BRT regularization involves jointly optimizing the number of  trees, learning rate and tree complexity.
-#' Here optimizing numbers of trees is done through the gbm.step function, and the script includes a function that tries to aid in the optimazation prosess for learning rate and tree complexity (the get.train.diganostic.func). 
+#' Here optimizing numbers of trees is done through the gbm.step function, and the script includes a function that tries to aid in the optimazation prosess for learning rate and tree complexity (the get.train.diganostic.func).
 #' The next step is to fit the actual model used for predictions (brt_mod)
 #'  Its is recomended to read through "A working guide to boosted regression trees" (Elith, et al 2009), before atempting your first go.
 
 #' Parameters to include
-#' @param 
+#' @param
 
 
 
@@ -28,16 +28,22 @@ library(doParallel)
 focal_species_var<-"gjedde"
 source("./R/f_geoselect.R")
 #outdata <- f_geoselect_inverse_spdf(geoselect="./Data/geoselect_native_Rutilus_rutilus.rds",inndata=outdata) #needs to be adressed
-# make spatial selection for model estimation - Norway minus Finnmark, Troms and Nordland. 
+# make spatial selection for model estimation - Norway minus Finnmark, Troms and Nordland.
 # The distribution and native area for finnamark would create a lot of missery
-outdata <- outdata_data_gjedde[outdata_data_gjedde$countryCode =="NO",]
-outdata$countryCode<-factor(outdata$countryCode)
+
+# e.g.
+# outdata <- outdata_data_gjedde[outdata_data_gjedde$countryCode =="NO",]
+# or
+outdata <- lake_env[lake_env$countryCode =="NO",]
+
+
+outdata$countryCode <- factor(outdata$countryCode)
 outdata <- outdata %>% filter(!(county %in% c("Finnmark","Troms","Nordland")))
 outdata <- outdata %>% filter((county %in% c("Aust-Agder","Vest-Agder","Telemark","Rogaland")))
-outdata$county<-factor(outdata$county)
-outdata<-outdata[outdata$minimumElevationInMeters>0,]
-outdata$n_pop<-NA
-outdata$n_pop<-ifelse(outdata$waterBodyID %in% geoselect_no_gjedde_pop_5000$waterBodyID,geoselect_no_gjedde_pop_5000$count,outdata$n_pop)
+outdata$county <- factor(outdata$county)
+# outdata <- outdata[outdata$minimumElevationInMeters>0,]
+# outdata$n_pop <- NA
+# outdata$n_pop <- ifelse(outdata$waterBodyID %in% geoselect_no_gjedde_pop_5000$waterBodyID,geoselect_no_gjedde_pop_5000$count,outdata$n_pop)
 
 
 
@@ -48,7 +54,7 @@ outdata$n_pop<-ifelse(outdata$waterBodyID %in% geoselect_no_gjedde_pop_5000$wate
 #focal_species_var <- stringr::str_replace(string=focal_species_vec, pattern=" ", replacement="_")
 #select_focal <- paste("!(",focal_species_var,"==1 & introduced==0)")
 #analyse.df <- outdata %>% dplyr::filter_(select_focal)
-analyse.df<-as.data.frame(outdata) # convert to data.frame - needed for gbm.step input
+analyse.df <- as.data.frame(outdata) # convert to data.frame - needed for gbm.step input
 
 
 ###############################
@@ -58,16 +64,17 @@ analyse.df<-as.data.frame(outdata) # convert to data.frame - needed for gbm.step
 
 #It is encuraged to do this with paralell computing speeds the prosess up to some extent.
 #Identify cores on current system
-cores<-detectCores(all.tests = FALSE, logical = FALSE)
+cores <- detectCores(all.tests = FALSE, logical = FALSE)
+# Outer loop has 9 items, the inner 5
 cores
 
 #Create training function for gbm.step
 get.train.diganostic.func=function(tree.com,learn){
   #set seed for reproducibility
-  k1<-gbm.step(data=analyse.df, 
+  k1<-gbm.step(data=analyse.df,
                gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","county","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), #Include variables at will here
                gbm.y = "introduced",
-               family = "bernoulli", 
+               family = "bernoulli",
                tree.complexity = tree.com,
                learning.rate = learn,
                bag.fraction = 0.8,
@@ -78,14 +85,14 @@ get.train.diganostic.func=function(tree.com,learn){
                silent=TRUE,
                plot.main = FALSE,
                n.cores=cores)
-  
+
   k.out=list(interaction.depth=k1$interaction.depth,
              shrinkage=k1$shrinkage,
              n.trees=k1$n.trees,
              AUC=k1$self.statistics$discrimination,
              cv.AUC=k1$cv.statistics$discrimination.mean,
              deviance=k1$self.statistics$mean.resid,
-             cv.deviance=k1$cv.statistics$deviance.mean)  
+             cv.deviance=k1$cv.statistics$deviance.mean)
   return(k.out)
 }
 
@@ -94,15 +101,15 @@ tree.complexity<-c(1:9)
 learning.rate<-c(0.01, 0.025, 0.005, 0.0025,0.001)
 
 #setup parallel backend to use n processors
-cl<-makeCluster(cores)
-registerDoParallel(cl)
+cl<-parallel::makeCluster(cores)
+doParallel::registerDoParallel(cl)
 
 #Run the actual function
-foreach(i = tree.complexity) %do% {
-  foreach(j = learning.rate) %do% {
+foreach(i = tree.complexity, .packages = c('gbm', 'dismo', 'doParallel')) %dopar% {
+  foreach(j = learning.rate, .packages = c('gbm', 'dismo', 'doParallel')) %dopar% {
     nam=paste0("gbm_tc",i,"lr",j)
     assign(nam,get.train.diganostic.func(tree.com=i,learn=j))
-    
+
   }
 }
 
@@ -131,12 +138,12 @@ train.results<-train.results[order(train.results$cv.dev,-train.results$cv.AUC, -
 
 train.results #Includes a dataframe with ordered (numbered) choice based on AUC cv.dev and cv.AUC, be aware that there are mutiple ways of judging the models...
 
-# Use best parametrization from train.results 
+# Use best parametrization from train.results
 
 brt_mod<-gbm.fixed(data=analyse.df, gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","county","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), gbm.y = "introduced",family = "bernoulli",tree.complexity = 3, learning.rate = 0.001,bag.fraction = 1,n.trees=9400)
 names(brt_mod$gbm.call)[1] <- "dataframe"
 
-predictors<-gbm.simplify(brt_mod,n.folds = 10, n.drops = "auto", alpha = 1, prev.stratify = TRUE, 
+predictors<-gbm.simplify(brt_mod,n.folds = 10, n.drops = "auto", alpha = 1, prev.stratify = TRUE,
                          eval.data = NULL, plot = TRUE)
 
 # save modell object as .rds
