@@ -69,10 +69,10 @@ cores <- detectCores(all.tests = FALSE, logical = FALSE)
 cores
 
 #Create training function for gbm.step
-get.train.diganostic.func=function(tree.com,learn){
+get.train.diganostic.func=function(tree.com,learn,indf){
   #set seed for reproducibility
-  k1<-gbm.step(data=analyse.df,
-               gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","county","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), #Include variables at will here
+  k1<-gbm.step(data=indf,
+               gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), # ,"county" Include variables at will here
                gbm.y = "introduced",
                family = "bernoulli",
                tree.complexity = tree.com,
@@ -84,7 +84,7 @@ get.train.diganostic.func=function(tree.com,learn){
                step.size=100,
                silent=TRUE,
                plot.main = FALSE,
-               n.cores=cores)
+               n.cores=1)
 
   k.out=list(interaction.depth=k1$interaction.depth,
              shrinkage=k1$shrinkage,
@@ -104,37 +104,70 @@ learning.rate<-c(0.01, 0.025, 0.005, 0.0025,0.001)
 cl<-parallel::makeCluster(cores)
 doParallel::registerDoParallel(cl)
 
+start.time <- Sys.time()
 #Run the actual function
-foreach(i = tree.complexity, .packages = c('gbm', 'dismo', 'doParallel')) %dopar% {
+gbms <- foreach(i = tree.complexity, .packages = c('gbm', 'dismo', 'doParallel'), .export = 'teestdf') %:%
   foreach(j = learning.rate, .packages = c('gbm', 'dismo', 'doParallel')) %dopar% {
-    nam=paste0("gbm_tc",i,"lr",j)
-    assign(nam,get.train.diganostic.func(tree.com=i,learn=j))
-
-  }
+    get.train.diganostic.func(tree.com=i,learn=j,indf=teestdf)
 }
+end.time <- Sys.time()
+
+#exec_time <- end.time - start.time
+end.time - start.time
 
 #Stop parallel
 stopCluster(cl)
 registerDoSEQ()
 
+# Create data frame for collecting training results
+train.results <- data.frame(tc=numeric(),
+                            lr=numeric(),
+                            interaction.depth=numeric(),
+                            shrinkage=numeric(),
+                            n.trees=numeric(),
+                            AUC=numeric(),
+                            cv.AUC=numeric(),
+                            deviance=numeric(),
+                            cv.deviance=numeric()
+                            )
+
+# Collect training results
+for (i in 1:length(tree.complexity)) {
+  for (j in 1:length(learning.rate)) {
+    train.results[nrow(train.results_df) + 1,] <- list(
+      tc=ifelse(is.null(tree.complexity[i]),NA,tree.complexity[i]),
+      lr=ifelse(is.null(learning.rate[j]),NA,learning.rate[j]),
+      interaction.depth=ifelse(is.null(gbms[[i]][[j]]$interaction.depth),NA,gbms[[i]][[j]]$interaction.depth),
+      shrinkage=ifelse(is.null(gbms[[i]][[j]]$shrinkage),NA,gbms[[i]][[j]]$shrinkage),
+      n.trees=ifelse(is.null(gbms[[i]][[j]]$n.trees),NA,gbms[[i]][[j]]$n.trees),
+      AUC=ifelse(is.null(gbms[[i]][[j]]$AUC),NA,gbms[[i]][[j]]$AUC),
+      cv.AUC=ifelse(is.null(gbms[[i]][[j]]$cv.AUC),NA,gbms[[i]][[j]]$cv.AUC),
+      deviance=ifelse(is.null(gbms[[i]][[j]]$deviance),NA,gbms[[i]][[j]]$deviance),
+      cv.deviance=ifelse(is.null(gbms[[i]][[j]]$cv.deviance),NA,gbms[[i]][[j]]$cv.deviance)
+    )
+  }
+}
+
+
+
 #Find all item in workspace that contain "gbm_tc"
-train.all<-ls(pattern="gbm_tc")
+#train.all<-ls(pattern="gbm_tc")
 
 #cbind each list that contains "gbm_tc"
-train.results<-list(do.call(cbind,mget(train.all)))
+#train.results<-list(do.call(cbind,mget(train.all)))
 
 #Place in a data frame
-train.results<- do.call(rbind, lapply(train.results, rbind))
-train.results <- data.frame(matrix(unlist(train.results),ncol=7 , byrow=T))
+#train.results<- do.call(rbind, lapply(train.results, rbind))
+#train.results <- data.frame(matrix(unlist(train.results),ncol=7 , byrow=T))
 
 #Change column names
-colnames(train.results)<-c("TC","LR","n.trees", "AUC", "cv.AUC", "dev", "cv.dev")
+#colnames(train.results)<-c("TC","LR","n.trees", "AUC", "cv.AUC", "dev", "cv.dev")
 
 #Round 4:7 down to 3 digits
-train.results[,4:7]<-round(train.results[,4:7],digits=3)
+train.results[,6:9] <- round(train.results[,6:9],digits=3)
 
 #Sort by cv.dev, cv.AUC, AUC
-train.results<-train.results[order(train.results$cv.dev,-train.results$cv.AUC, -train.results$AUC),]
+train.results <- train.results[order(train.results$cv.deviance,-train.results$cv.AUC, -train.results$AUC),]
 
 train.results #Includes a dataframe with ordered (numbered) choice based on AUC cv.dev and cv.AUC, be aware that there are mutiple ways of judging the models...
 
