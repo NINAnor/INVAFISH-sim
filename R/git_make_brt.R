@@ -20,9 +20,9 @@
 # part 1: load and filter data
 ###############################
 library(stringr)
+library(gbm)
 library(dismo)
 library(dplyr)
-library(gbm)
 library(doParallel)
 
 focal_species_var<-"gjedde"
@@ -70,29 +70,42 @@ cores
 
 #Create training function for gbm.step
 get.train.diganostic.func=function(tree.com,learn,indf){
+
+  k.out=list(interaction.depth=NA,
+                 shrinkage=NA,
+                 n.trees=NA,
+                 AUC=NA,
+                 cv.AUC=NA,
+                 deviance=NA,
+                 cv.deviance=NA)
+
   #set seed for reproducibility
-  k1<-gbm.step(data=indf,
+  k1<-try(gbm.step(data=indf,
                gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), # ,"county" Include variables at will here
                gbm.y = "introduced",
                family = "bernoulli",
                tree.complexity = tree.com,
                learning.rate = learn,
-               bag.fraction = 0.5,
+               bag.fraction = 0.8,
                prev.stratify=TRUE,
                n.folds=10,
                n.trees=500,
                step.size=100,
                silent=TRUE,
                plot.main = FALSE,
-               n.cores=1)
+               n.cores=1))
 
-  k.out=list(interaction.depth=k1$interaction.depth,
-             shrinkage=k1$shrinkage,
-             n.trees=k1$n.trees,
-             AUC=k1$self.statistics$discrimination,
-             cv.AUC=k1$cv.statistics$discrimination.mean,
-             deviance=k1$self.statistics$mean.resid,
-             cv.deviance=k1$cv.statistics$deviance.mean)
+  if(exists("k1")) {
+    if(! is.vector(k1)) {
+      k.out=try(list(interaction.depth=k1$interaction.depth,
+               shrinkage=k1$shrinkage,
+               n.trees=k1$n.trees,
+               AUC=k1$self.statistics$discrimination,
+               cv.AUC=k1$cv.statistics$discrimination.mean,
+               deviance=k1$self.statistics$mean.resid,
+               cv.deviance=k1$cv.statistics$deviance.mean))
+    }
+    }
   return(k.out)
 }
 
@@ -108,7 +121,7 @@ start.time <- Sys.time()
 #Run the actual function
 gbms <- foreach(i = tree.complexity, .packages = c('gbm', 'dismo', 'doParallel'), .export = 'teestdf') %:%
   foreach(j = learning.rate, .packages = c('gbm', 'dismo', 'doParallel')) %dopar% {
-    get.train.diganostic.func(tree.com=i,learn=j,indf=analyse.df)
+    try(get.train.diganostic.func(tree.com=i,learn=j,indf=analyse.df))
 }
 end.time <- Sys.time()
 
