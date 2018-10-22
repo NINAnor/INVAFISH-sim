@@ -119,7 +119,7 @@ doParallel::registerDoParallel(cl)
 
 start.time <- Sys.time()
 #Run the actual function
-gbms <- foreach(i = tree.complexity, .packages = c('gbm', 'dismo', 'doParallel'), .export = 'teestdf') %:%
+gbms <- foreach(i = tree.complexity, .packages = c('gbm', 'dismo', 'doParallel'), .export = 'analyse.df') %:%
   foreach(j = learning.rate, .packages = c('gbm', 'dismo', 'doParallel')) %dopar% {
     try(get.train.diganostic.func(tree.com=i,learn=j,indf=analyse.df))
 }
