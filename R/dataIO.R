@@ -12,12 +12,20 @@
 #'
 
 get_inndata <- function(serveradress,datafolder){
-
+ user_msg <- 'Please enter your user:'
+ pw_msg <- "Please enter your password:"
+  if (any(grepl("RStudio", .libPaths()))) {
+    pg_user <- rstudioapi::askForPassword(user_msg)
+    pg_password <- rstudioapi::askForPassword(pw_msg)
+  } else {
+    pg_user <- readline(prompt=user_msg)
+    pg_password <- readline(prompt=pw_msg)
+  }
   # creating db connection object
   nofa_db <- dplyr::src_postgres(host=serveradress,
                           dbname="nofa",
-                          user=rstudioapi::askForPassword("Please enter your user"),
-                          password=rstudioapi::askForPassword("Please enter your psw"),
+                          user=pg_user,
+                          password=pg_password,
                           options="-c search_path=nofa")
 
   #.........................................................................
