@@ -77,7 +77,7 @@ get.train.diganostic.func=function(tree.com,learn,indf){
                family = "bernoulli",
                tree.complexity = tree.com,
                learning.rate = learn,
-               bag.fraction = 0.8,
+               bag.fraction = 0.5,
                prev.stratify=TRUE,
                n.folds=10,
                n.trees=500,
@@ -108,7 +108,7 @@ start.time <- Sys.time()
 #Run the actual function
 gbms <- foreach(i = tree.complexity, .packages = c('gbm', 'dismo', 'doParallel'), .export = 'teestdf') %:%
   foreach(j = learning.rate, .packages = c('gbm', 'dismo', 'doParallel')) %dopar% {
-    get.train.diganostic.func(tree.com=i,learn=j,indf=teestdf)
+    get.train.diganostic.func(tree.com=i,learn=j,indf=analyse.df)
 }
 end.time <- Sys.time()
 
