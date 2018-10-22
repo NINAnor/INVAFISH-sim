@@ -32,9 +32,15 @@ library(pool)
 pg_drv <- RPostgreSQL::PostgreSQL()
 pg_host <- "vm-srv-wallace.vm.ntnu.no"
 pg_db <- 'nofa'
-pg_user <- rstudioapi::askForPassword("enter username")
-pg_password <- rstudioapi::askForPassword("enter psw")
-
+user_msg <- 'Please enter your user:'
+pw_msg <- "Please enter your password:"
+if (any(grepl("RStudio", .libPaths()))) {
+  pg_user <- rstudioapi::askForPassword(user_msg)
+  pg_password <- rstudioapi::askForPassword(pw_msg)
+} else {
+  pg_user <- readline(prompt=user_msg)
+  pg_password <- readline(prompt=pw_msg)
+}
 
 pool <- dbPool(
   drv = pg_drv,
