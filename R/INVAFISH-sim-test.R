@@ -1,4 +1,20 @@
+if (!require('easypackages', character.only=T, quietly=T)) {
+  devtools::install_github("jakesherman/easypackages")
+  require('easypackages')
+  }
+
+req_packages <- c('dplyr', 'dbplyr')
+
+for (p in req_packages) {
+  if(!require(p, character.only=T, quietly=T)){
+    install.packages(p)
+    print(p)
+  }
+}
+libraries(req_packages[2:])
+
 simdir <- '~/temp/'
+try(system(paste0('mkdir ', simdir)))
 pg_host <- "vm-srv-wallace.vm.ntnu.no"
 
 focal_species <- "Esox lucius"
@@ -7,6 +23,7 @@ start_year <- 1967
 end_year <- 2017
 
 # From dataIO.R
+source('./R/dataIO.R')
 get_inndata(serveradress=pg_host, datafolder=simdir)
 inndata <- readRDS(paste0(simdir, "view_occurrence_by_event.rds", sep=''))
 
