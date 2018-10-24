@@ -26,7 +26,7 @@ library(dplyr)
 library(doParallel)
 
 focal_species_var<-"gjedde"
-source("./R/f_geoselect.R")
+#source("./R/f_geoselect.R")
 #outdata <- f_geoselect_inverse_spdf(geoselect="./Data/geoselect_native_Rutilus_rutilus.rds",inndata=outdata) #needs to be adressed
 # make spatial selection for model estimation - Norway minus Finnmark, Troms and Nordland.
 # The distribution and native area for finnamark would create a lot of missery
@@ -34,8 +34,9 @@ source("./R/f_geoselect.R")
 # e.g.
 # outdata <- outdata_data_gjedde[outdata_data_gjedde$countryCode =="NO",]
 # or
-outdata <- lake_env[lake_env$countryCode =="NO",]
+# outdata <- lake_env[lake_env$countryCode =="NO",]
 
+outdata <- merge(inndata_timeslot[,c('waterBodyID', 'Esox_lucius')], lake_env, by='waterBodyID', all.y=FALSE)
 
 outdata$countryCode <- factor(outdata$countryCode)
 outdata <- outdata %>% filter(!(county %in% c("Finnmark","Troms","Nordland")))
@@ -64,7 +65,7 @@ analyse.df <- as.data.frame(outdata) # convert to data.frame - needed for gbm.st
 
 #It is encuraged to do this with paralell computing speeds the prosess up to some extent.
 #Identify cores on current system
-cores <- detectCores(all.tests = FALSE, logical = FALSE)
+cores <- detectCores(all.tests = FALSE, logical = FALSE) - 2
 # Outer loop has 9 items, the inner 5
 cores
 
@@ -81,7 +82,7 @@ get.train.diganostic.func=function(tree.com,learn,indf){
 
   #set seed for reproducibility
   k1<-try(gbm.step(data=indf,
-               gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), # ,"county" Include variables at will here
+               gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), #  Include variables at will here,"county"
                gbm.y = "introduced",
                family = "bernoulli",
                tree.complexity = tree.com,
@@ -119,7 +120,7 @@ doParallel::registerDoParallel(cl)
 
 start.time <- Sys.time()
 #Run the actual function
-gbms <- foreach(i = tree.complexity, .packages = c('gbm', 'dismo', 'doParallel'), .export = 'analyse.df') %:%
+gbms <- foreach(i = tree.complexity, .packages = c('gbm', 'dismo', 'doParallel')) %:%
   foreach(j = learning.rate, .packages = c('gbm', 'dismo', 'doParallel')) %dopar% {
     try(get.train.diganostic.func(tree.com=i,learn=j,indf=analyse.df))
 }
@@ -133,7 +134,7 @@ stopCluster(cl)
 registerDoSEQ()
 
 # Create data frame for collecting training results
-train.results <- data.frame(tc=numeric(),
+train.results.par <- data.frame(tc=numeric(),
                             lr=numeric(),
                             interaction.depth=numeric(),
                             shrinkage=numeric(),
@@ -147,7 +148,7 @@ train.results <- data.frame(tc=numeric(),
 # Collect training results
 for (i in 1:length(tree.complexity)) {
   for (j in 1:length(learning.rate)) {
-    train.results[nrow(train.results_df) + 1,] <- list(
+    train.results.par[nrow(train.results.par) + 1,] <- list(
       tc=ifelse(is.null(tree.complexity[i]),NA,tree.complexity[i]),
       lr=ifelse(is.null(learning.rate[j]),NA,learning.rate[j]),
       interaction.depth=ifelse(is.null(gbms[[i]][[j]]$interaction.depth),NA,gbms[[i]][[j]]$interaction.depth),
@@ -177,20 +178,29 @@ for (i in 1:length(tree.complexity)) {
 #colnames(train.results)<-c("TC","LR","n.trees", "AUC", "cv.AUC", "dev", "cv.dev")
 
 #Round 4:7 down to 3 digits
-train.results[,6:9] <- round(train.results[,6:9],digits=3)
+train.results.par[,6:9] <- round(train.results.par[,6:9],digits=3)
 
 #Sort by cv.dev, cv.AUC, AUC
-train.results <- train.results[order(train.results$cv.deviance,-train.results$cv.AUC, -train.results$AUC),]
+train.results.par <- train.results.par[order(train.results.par$cv.deviance,-train.results.par$cv.AUC, -train.results.par$AUC),]
 
-train.results #Includes a dataframe with ordered (numbered) choice based on AUC cv.dev and cv.AUC, be aware that there are mutiple ways of judging the models...
+# Results deviate when using %do% and %dopar%
+train.results.par #Includes a dataframe with ordered (numbered) choice based on AUC cv.dev and cv.AUC, be aware that there are mutiple ways of judging the models...
+
+# For Agder with 378 rows in data.table
+#tc     lr interaction.depth shrinkage n.trees    AUC  cv.AUC   deviance
+#45  9 0.0010                 9    0.0010    4000 1.000  0.941    0.129
+#30  6 0.0010                 6    0.0010    5200 1.000  0.937    0.144
+#18  4 0.0050                 4    0.0050    1500 0.999  0.937    0.156
+#20  4 0.0010                 4    0.0010    7200 0.998  0.939    0.163
 
 # Use best parametrization from train.results
 
-brt_mod<-gbm.fixed(data=analyse.df, gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","county","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), gbm.y = "introduced",family = "bernoulli",tree.complexity = 3, learning.rate = 0.001,bag.fraction = 1,n.trees=9400)
+# brt_mod<-gbm.fixed(data=analyse.df, gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), gbm.y = "introduced",family = "bernoulli",tree.complexity = 9, learning.rate = 0.001,bag.fraction = 1,n.trees=4000)
+brt_mod<-gbm.step(data=analyse.df, gbm.x=c("distance_to_road_log", "dist_to_closest_pop_log", "SCI", "minimumElevationInMeters", "buffer_5000m_population_2006" ,"area_km2_log", "n_pop"), gbm.y="introduced", family="bernoulli", tree.complexity=9, step.size=50, learning.rate=0.001, n.trees=1000, max.trees=7000)
 names(brt_mod$gbm.call)[1] <- "dataframe"
 
 predictors<-gbm.simplify(brt_mod,n.folds = 10, n.drops = "auto", alpha = 1, prev.stratify = TRUE,
                          eval.data = NULL, plot = TRUE)
 
 # save modell object as .rds
-saveRDS(brt_mod,paste("./Data/brt_mod_agder_",focal_species_var,".rds",sep=""))
+saveRDS(brt_mod,paste0(simdir, "/brt_mod_agder_",focal_species_var,".rds"))
