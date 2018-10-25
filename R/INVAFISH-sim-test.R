@@ -1,3 +1,9 @@
+if (!require('devtools', character.only=T, quietly=T)) {
+  # Requires OpenSSL on the system
+  install.packages('devtools')
+  require('devtools')
+}
+
 if (!require('easypackages', character.only=T, quietly=T)) {
   devtools::install_github("jakesherman/easypackages")
   require('easypackages')
@@ -5,7 +11,7 @@ if (!require('easypackages', character.only=T, quietly=T)) {
 
 library(easypackages)
 
-req_packages <- c('dplyr', 'dbplyr', 'lubridate', 'FNN', 'stringr', 'gbm', 'dismo', 'doParallel')
+req_packages <- c('dplyr', 'getPass', 'dbplyr', 'lubridate', 'FNN', 'stringr', 'gbm', 'dismo', 'doParallel', 'RPostgreSQL', 'pool', 'postGIStools')
 
 for (p in req_packages) {
   if(!require(p, character.only=T, quietly=T)){
@@ -15,14 +21,53 @@ for (p in req_packages) {
 }
 libraries(req_packages[2:length(req_packages)])
 
+scriptdir <- '~/INVAFISH-sim/'
+setwd(scriptdir)
+
 simdir <- '~/temp/'
 try(system(paste0('mkdir ', simdir)))
-pg_host <- "vm-srv-wallace.vm.ntnu.no"
 
 focal_species <- "Esox lucius"
 focal_speciesid <- 26181
 start_year <- 1967
 end_year <- 2017
+
+### Setup database connection
+#Set connection parameters
+pg_drv <- RPostgreSQL::PostgreSQL()
+pg_db <- 'nofa'
+host_msg <- 'Please enter host name:'
+user_msg <- 'Please enter your user name:'
+pw_msg <- "Please enter your password:"
+if (any(grepl("RStudio", .libPaths()))) {
+  pg_host <- rstudioapi::showPrompt(title='Hostname', message=host_msg, default='')
+} else {
+  # cat(paste0(host_msg, '\n'));
+  pg_host <- getPass(msg=host_msg)
+    # scan(what=character(), nmax=1, quiet=TRUE)
+}
+
+if (any(grepl("RStudio", .libPaths()))) {
+  pg_user <- rstudioapi::showPrompt(title='Username', message=user_msg, default='')
+} else {
+  # cat(paste0(user_msg, '\n'));
+  pg_user <- getPass(msg=user_msg)
+  # scan(what=character(), nmax=1, quiet=TRUE)
+}
+
+pg_password <- getPass(msg=pw_msg)
+
+pool <- dbPool(
+  drv = pg_drv,
+  dbname = pg_db,
+  host = pg_host,
+  user = pg_user,
+  password = pg_password,
+  idleTimeout = 36000000
+)
+
+con <- poolCheckout(pool)
+
 
 # From dataIO.R
 source('./R/dataIO.R')
@@ -36,7 +81,7 @@ geoselect_no_gjedde_pop_5000 <- dbGetQuery(con, 'SELECT al.id AS "waterBodyID", 
                                                   nofa.lake AS al,
                                            (SELECT geom FROM nofa.lake WHERE id IN (SELECT "waterBodyID" FROM nofa.get_last_occurrence_status(
                                            "taxonID" => 26181,
-                                           counties => \'Vest-Agder,Aust-Agder\'))) AS ol
+                                           counties => \'Vest-Agder,Aust-Agder,Telemark,Rogaland\'))) AS ol
                                            WHERE ST_DWithin(al.geom, ol.geom, 5000)
                                            GROUP BY al.id')
 
@@ -65,7 +110,8 @@ lake_env$Esox_lucius[is.na(lake_env$Esox_lucius)] <- 0
 lake_env$introduced <- inndata_timeslot$introduced[match(as.numeric(lake_env$waterBodyID), inndata_timeslot$waterBodyID)]
 lake_env$introduced[is.na(lake_env$introduced)] <- 0
 
-lake_env <- merge(lake_env, geoselect_no_gjedde_pop_5000, by="waterBodyID")
+lake_env <- merge(lake_env, geoselect_no_gjedde_pop_5000, by="waterBodyID", all.x=TRUE)
+lake_env$count <- lake_env$count - 1
 lake_env$n_pop <- ifelse(is.na(lake_env$count), 0, lake_env$count)
 
 #add recalculated closest distance based on new data
@@ -96,8 +142,8 @@ sim_duration <- 1 # Duration of the scenario, in years (will be corced to multip
 time_slot_length <- 50 # Duration of the time-slot, in years (time-span of each time-slot)
 gmb_time_slot_length <- 50 # Duration of the time-slot, in years, used to estimate establishment probability
 n_time_slots <- 2#as.integer(sim_duration/time_slot_length)
-start_year <- 2017
-end_year <-2017 + time_slot_length
+start_year_sim <- 2017
+end_year_sim <- start_year_sim + time_slot_length
 # secondary dispersal stuff
 with_secondary <- TRUE # should secondary spread be included in simulations?
 slope_barrier <- 700 # max slope for migration upstream
@@ -137,16 +183,16 @@ for(j in 1:Nsims){
   for(i in 1:n_time_slots){
 
     ### i.1 predict translocations and store new introductions in temp object
-    tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,focal_species,temp_inc,start_year, end_year)
+    tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,focal_species,temp_inc,start_year_sim, end_year_sim)
     tmp_trans <- tmp_trans[!is.na(tmp_trans$Esox_lucius),]
     # include secondary dispeersal?
     if(with_secondary==TRUE){
 
       # get wbID from introductions in run i
       introduction_lakes <- tmp_trans[tmp_trans$introduced==1,]$waterBodyID
-      pike_lakes<- tmp_trans$waterBodyID[tmp_trans[species_var]==1]
+      pike_lakes <- tmp_trans$waterBodyID[tmp_trans[species_var]==1]
       introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% pike_lakes]
-      introduction_lakes <- introduction_lakes[!is.na(introduction_lakes)]
+      introduction_lakes <- introduction_lakes[! introduction_lakes %in% analyse.df$waterBodyID[analyse.df$Esox_lucius==1]] # introduction_lakes[!is.na(introduction_lakes)]
       #.............................................................
       # Downstream dispersal
       #.............................................................
@@ -158,12 +204,13 @@ for(j in 1:Nsims){
 
       # select out downstream lakes that does not have species at start of time-slot
       if(use_slope_barrier==TRUE){
-        reachable_lakes_pike <- get_reachable_lakes_wrid(con,introduction_wrid, pike_lakes, slope_barrier)
+        # wbid_wrid_array <- get_wbid_wrid_array(con, pike_lakes)
+        reachable_lakes_pike <- get_reachable_lakes_wbid(con, pike_lakes, slope_barrier)
 
         #downstream_lakes <- get_downstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid))
         # select out downstream lakes that does not have species at start of time-slot
         #downstream_lakes <- downstream_lakes[!(downstream_lakes$downstream_lakes %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1]),]
-        reachable_lakes_pike <- reachable_lakes_pike[!(reachable_lakes_pike %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1]),]
+        reachable_lakes_pike <- unique(reachable_lakes_pike$acclake[!(reachable_lakes_pike$acclake %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1])])
         # finally assign introduction to downstream lakes (without previous obs/intro)
         tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% introduction_lakes,1,tmp_trans$introduced)
         tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% reachable_lakes_pike,1,tmp_trans$introduced)
@@ -234,7 +281,7 @@ for(j in 1:Nsims){
     ### modify inndata_sim with new introductions to provide innput to time_slot i+1
     # Add new introductions to "species_var" column in inndata_sim
     tmp1 <- inndata_sim[species_var]
-    inndata_sim[species_var] <- ifelse(tmp_trans$introduced==1,1,tmp1[,1])
+    inndata_sim[species_var][inndata_sim$waterBodyID %in% tmp_trans$waterBodyID[tmp_trans$introduced==1],] <- 1
 
     # recalculate distance to closest population and replace values
     # in inndata_sim where distance is smaller than previous;
@@ -242,19 +289,19 @@ for(j in 1:Nsims){
     # the geographic area beein investigated
     # NB! need a try function here to make run in cases where there are non intros in simrun
     # and f_calc_dist fail
-    tmp <- try(f_calc_dist(outdata=inndata_sim,species=species),silent = TRUE)
+    tmp <- try(f_calc_dist(outdata=inndata_sim,species=focal_species),silent = TRUE)
     if(!is.null(dim(tmp))){
-      inndata_sim$dist_to_closest_pop <- ifelse(tmp$dist_to_closest_pop<inndata_sim$dist_to_closest_pop,
-                                                tmp$dist_to_closest_pop,
-                                                inndata_sim$dist_to_closest_pop)
+      inndata_sim$dist_to_closest_pop_log <- ifelse(log(tmp$dist_to_closest_pop)<inndata_sim$dist_to_closest_pop,
+                                                log(tmp$dist_to_closest_pop),
+                                                inndata_sim$dist_to_closest_pop_log)
     } else {
-      inndata_sim$dist_to_closest_pop <-  inndata_sim$dist_to_closest_pop
+      inndata_sim$dist_to_closest_pop_log <-  inndata_sim$dist_to_closest_pop_log
     }
 
     tmp <- data.frame()
 
     # and log variable for model predictions
-    inndata_sim$dist_to_closest_pop_log <- log(inndata_sim$dist_to_closest_pop)
+    # inndata_sim$dist_to_closest_pop_log <- log(inndata_sim$dist_to_closest_pop)
 
   } # end of i loop
 
@@ -263,3 +310,38 @@ for(j in 1:Nsims){
 
 } # end of j loop
 
+#............................................................................
+# sum up sim_output pr lake and save / write to database
+#............................................................................
+# store inndata1, raw and lake aggregated sim_output as list in rds object
+source('./R/f_postsim_processing.R')
+tmpout <- list()
+tmpout[["sim_output"]] <- sim_output
+tmpout[["inndata_sim1"]] <- inndata_sim1
+tmpout[["sim_output_lake"]] <- sim_output_lake
+tmpout[["focal_species"]] <- species
+tmpout[["time_slot_length"]] <- time_slot_length
+tmpout[["start_year"]] <- start_year
+
+# Write output to local disk
+url <- paste(simdir, "sim_out_",species_var,"_agder_5simu.rds",sep="")
+saveRDS(tmpout,url)
+
+# write output to BOX
+#library(boxr)
+#box_auth() # When run on server, create OAuth2.0 token locally and copy to server - see boxr vignett (remember .gitignore if needed)
+#box_ul(dir_id = 29103527607, file = paste("./Data/sim_out_",species_var,".rds",sep=""))
+
+# Write lake-specific summary to database
+dataToWrite <- sim_output_lake
+#nameOfTable <- tolower(paste("sim_output_",species_var,"_no_extermination_scenario",sep=""))
+#f_write_simresult_to_db(dataToWrite=sim_output_lake,nameOfTable)
+
+
+dbWriteTable(con, c("agder", "sim_out_lake_no_ext_5simu_test"), value=dataToWrite,overwrite=TRUE)
+
+#dbWriteTable(con, c("temporary_agder", "sim_agder_output_esox_lucius"), as.data.frame(sim_output_lake))
+
+# Rydde opp i forbindelse mot server
+poolReturn(con)
+poolClose(pool)

@@ -36,7 +36,7 @@ focal_species_var<-"gjedde"
 # or
 # outdata <- lake_env[lake_env$countryCode =="NO",]
 
-outdata <- merge(inndata_timeslot[,c('waterBodyID', 'Esox_lucius')], lake_env, by='waterBodyID', all.y=FALSE)
+outdata <- merge(inndata_timeslot[,c('waterBodyID')], lake_env, by='waterBodyID', all.y=FALSE)
 
 outdata$countryCode <- factor(outdata$countryCode)
 outdata <- outdata %>% filter(!(county %in% c("Finnmark","Troms","Nordland")))
@@ -46,7 +46,7 @@ outdata$county <- factor(outdata$county)
 # outdata$n_pop <- NA
 # outdata$n_pop <- ifelse(outdata$waterBodyID %in% geoselect_no_gjedde_pop_5000$waterBodyID,geoselect_no_gjedde_pop_5000$count,outdata$n_pop)
 
-
+covariates <- c("distance_to_road_log", "dist_to_closest_pop_log", "SCI", "eurolst_bio10", "buffer_5000m_population_2006" ,"area_km2_log", "n_pop")
 
 #focal_species_vec <- unique(outdata$focal_species)
 # remove all populations of focal species where focal species is present at start of time-slot
@@ -82,7 +82,7 @@ get.train.diganostic.func=function(tree.com,learn,indf){
 
   #set seed for reproducibility
   k1<-try(gbm.step(data=indf,
-               gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), #  Include variables at will here,"county"
+               gbm.x = covariates, #  Include variables at will here,"county"
                gbm.y = "introduced",
                family = "bernoulli",
                tree.complexity = tree.com,
@@ -187,20 +187,23 @@ train.results.par <- train.results.par[order(train.results.par$cv.deviance,-trai
 train.results.par #Includes a dataframe with ordered (numbered) choice based on AUC cv.dev and cv.AUC, be aware that there are mutiple ways of judging the models...
 
 # For Agder with 378 rows in data.table
-#tc     lr interaction.depth shrinkage n.trees    AUC  cv.AUC   deviance
-#45  9 0.0010                 9    0.0010    4000 1.000  0.941    0.129
-#30  6 0.0010                 6    0.0010    5200 1.000  0.937    0.144
-#18  4 0.0050                 4    0.0050    1500 0.999  0.937    0.156
-#20  4 0.0010                 4    0.0010    7200 0.998  0.939    0.163
-
+#tc     lr interaction.depth shrinkage n.trees   AUC cv.AUC deviance
+#2 0.0050                 2    0.0050     900 0.956  0.950    0.042
+#3 0.0025                 3    0.0025    1500 0.963  0.949    0.038
+#2 0.0010                 2    0.0010    5200 0.962  0.947    0.041
+#6 0.0025                 6    0.0025    1000 0.977  0.941    0.034
+#6 0.0010                 6    0.0010    2900 0.976  0.936    0.031
 # Use best parametrization from train.results
 
 # brt_mod<-gbm.fixed(data=analyse.df, gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), gbm.y = "introduced",family = "bernoulli",tree.complexity = 9, learning.rate = 0.001,bag.fraction = 1,n.trees=4000)
-brt_mod<-gbm.step(data=analyse.df, gbm.x=c("distance_to_road_log", "dist_to_closest_pop_log", "SCI", "minimumElevationInMeters", "buffer_5000m_population_2006" ,"area_km2_log", "n_pop"), gbm.y="introduced", family="bernoulli", tree.complexity=9, step.size=50, learning.rate=0.001, n.trees=1000, max.trees=7000)
+brt_mod<-gbm.step(data=analyse.df, gbm.x=covariates, gbm.y="introduced", family="bernoulli", tree.complexity=2, step.size=50, learning.rate=0.005, n.trees=100, max.trees=10000)
 names(brt_mod$gbm.call)[1] <- "dataframe"
 
 predictors<-gbm.simplify(brt_mod,n.folds = 10, n.drops = "auto", alpha = 1, prev.stratify = TRUE,
                          eval.data = NULL, plot = TRUE)
+# Plot suggests to possibly also drop a second predictor (buffer_5000m_population_2006)
+brt_mod_simp<-gbm.step(data=analyse.df, gbm.x=predictors$pred.list[[1]], gbm.y="introduced", family="bernoulli", tree.complexity=6, step.size=50, learning.rate=0.001, n.trees=100, max.trees=10000)
+#gbm.step(data=analyse.df, gbm.x = predictors$pred.list[[1]], gbm.y = "introduced",family = "bernoulli",tree.complexity = 8,step.size=100 ,learning.rate = 0.01,n.trees=1500)
 
 # save modell object as .rds
-saveRDS(brt_mod,paste0(simdir, "/brt_mod_agder_",focal_species_var,".rds"))
+saveRDS(brt_mod_simp,paste0(simdir, "/brt_mod_agder_",focal_species_var,".rds"))

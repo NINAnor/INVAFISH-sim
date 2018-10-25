@@ -2,29 +2,29 @@ library(RPostgreSQL)
 library(pool)
 
 #Set connection parameters
-pg_drv <- RPostgreSQL::PostgreSQL()
-pg_host <- "vm-srv-wallace.vm.ntnu.no"
-pg_db <- 'nofa'
-user_msg <- 'Please enter your user:'
-pw_msg <- "Please enter your password:"
-if (any(grepl("RStudio", .libPaths()))) {
-  pg_user <- rstudioapi::askForPassword(user_msg)
-  pg_password <- rstudioapi::askForPassword(pw_msg)
-} else {
-  pg_user <- readline(prompt=user_msg)
-  pg_password <- readline(prompt=pw_msg)
-}
+#pg_drv <- RPostgreSQL::PostgreSQL()
+#pg_host <- "vm-srv-wallace.vm.ntnu.no"
+#pg_db <- 'nofa'
+#user_msg <- 'Please enter your user:'
+#pw_msg <- "Please enter your password:"
+#if (any(grepl("RStudio", .libPaths()))) {
+#  pg_user <- rstudioapi::askForPassword(user_msg)
+#  pg_password <- rstudioapi::askForPassword(pw_msg)
+#} else {
+#  pg_user <- readline(prompt=user_msg)
+#  pg_password <- readline(prompt=pw_msg)
+#}
 
-pool <- dbPool(
-  drv = pg_drv,
-  dbname = pg_db,
-  host = pg_host,
-  user = pg_user,
-  password = pg_password,
-  idleTimeout = 36000000
-)
+#pool <- dbPool(
+#  drv = pg_drv,
+#  dbname = pg_db,
+#  host = pg_host,
+#  user = pg_user,
+#  password = pg_password,
+#  idleTimeout = 36000000
+#)
 
-con <- poolCheckout(pool)
+#con <- poolCheckout(pool)
 
 ####################################################################################
 # N?

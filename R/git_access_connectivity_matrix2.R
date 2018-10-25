@@ -23,35 +23,35 @@
 ####################################################################################
 # Sette opp en test case
 
-slope_barrirer <- 700
+# slope_barrirer <- 700
 
 library(RPostgreSQL)
 library(pool)
 
 #Set connection parameters
-pg_drv <- RPostgreSQL::PostgreSQL()
-pg_host <- "vm-srv-wallace.vm.ntnu.no"
-pg_db <- 'nofa'
-user_msg <- 'Please enter your user:'
-pw_msg <- "Please enter your password:"
-if (any(grepl("RStudio", .libPaths()))) {
-  pg_user <- rstudioapi::askForPassword(user_msg)
-  pg_password <- rstudioapi::askForPassword(pw_msg)
-} else {
-  pg_user <- readline(prompt=user_msg)
-  pg_password <- readline(prompt=pw_msg)
-}
+#pg_drv <- RPostgreSQL::PostgreSQL()
+#pg_host <- "vm-srv-wallace.vm.ntnu.no"
+#pg_db <- 'nofa'
+#user_msg <- 'Please enter your user:'
+#pw_msg <- "Please enter your password:"
+#if (any(grepl("RStudio", .libPaths()))) {
+#  pg_user <- rstudioapi::askForPassword(user_msg)
+#  pg_password <- rstudioapi::askForPassword(pw_msg)
+#} else {
+#  pg_user <- readline(prompt=user_msg)
+#  pg_password <- readline(prompt=pw_msg)
+#}
 
-pool <- dbPool(
-  drv = pg_drv,
-  dbname = pg_db,
-  host = pg_host,
-  user = pg_user,
-  password = pg_password,
-  idleTimeout = 36000000
-)
+#pool <- dbPool(
+#  drv = pg_drv,
+#  dbname = pg_db,
+#  host = pg_host,
+#  user = pg_user,
+#  password = pg_password,
+#  idleTimeout = 36000000
+#)
 
-con <- poolCheckout(pool)
+#con <- poolCheckout(pool)
 
 
 ####################################################################################
@@ -74,6 +74,12 @@ get_wbid_wrid <- function(db_conection, eb_waterregionID) {
 }
 # Eksempel
 wbid_wrid <- get_wbid_wrid(con, wrids)
+
+get_wbid_wrid_array <- function(db_conection, waterBodyID) {
+  sql_string <- paste("SELECT array_to_string(array_agg(id), ',') AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE id IN (", toString(waterBodyID, sep=','), ") GROUP BY ecco_biwa_wr;", sep='')
+  res <- dbGetQuery(db_conection, sql_string)
+  res
+}
 
 ### Hent ut data frame med unike kombinasjon av waterbodyID (kolonne 1) og id for innsj?er som ligger nedstr?ms (kolonne 2)
 get_downstream_lakes <- function(db_conection, waterbodyID, eb_waterregionID) {
@@ -139,6 +145,28 @@ get_reachable_lakes <- function(db_conection, waterbodyID, slope_barrier) {
 #reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 700)
 # Eksempel (get only downstream or adjacent lakes)
 #reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 0)
+get_reachable_lakes_wbid <- function(db_conection, waterbodyID, slope_barrier) {
+  sql_string <- paste0('SELECT c."waterBodyID" AS source, l.to_lake AS acclake
+      FROM agder.lake_connectivity AS l,
+(
+  SELECT ecco_biwa_wr AS wrid, id AS "waterBodyID" FROM nofa.lake WHERE id IN(', toString(waterbodyID, sep=','),')
+) AS c
+  WHERE l.wrid = c.wrid AND
+  l.from_lake = c."waterBodyID" AND l.upstream_slope_max_max <= 700
+  UNION ALL
+  SELECT c."waterBodyID" AS source, l.from_lake AS acclake
+  FROM agder.lake_connectivity AS l,
+  (
+  SELECT ecco_biwa_wr AS wrid, id AS "waterBodyID" FROM nofa.lake WHERE id IN(', toString(waterbodyID, sep=','), ')
+) AS c
+
+      WHERE l.wrid = c.wrid AND
+      l.to_lake = c."waterBodyID" AND l.downstream_slope_max_max <= 700')
+                       res <- dbGetQuery(db_conection, sql_string)
+                       res
+}
+
+
 get_reachable_lakes_wrid <- function(db_conection, wrid, waterbodyID, slope_barrier) {
   sql_string <- paste(
     "--SELECT count(acclake), acclake FROM (
