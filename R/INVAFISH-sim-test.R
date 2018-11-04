@@ -137,7 +137,7 @@ species_var <- stringr::str_replace(focal_species," ","_") # variable describing
 temp_inc <- 0 # temperature increas
 
 # simulation and time specific stuff
-Nsims <- 5 # number of iterations
+Nsims <- 200 # number of iterations
 sim_duration <- 1 # Duration of the scenario, in years (will be corced to multiple of time_slot_length)
 time_slot_length <- 50 # Duration of the time-slot, in years (time-span of each time-slot)
 gmb_time_slot_length <- 50 # Duration of the time-slot, in years, used to estimate establishment probability
@@ -315,6 +315,9 @@ for(j in 1:Nsims){
 #............................................................................
 # store inndata1, raw and lake aggregated sim_output as list in rds object
 source('./R/f_postsim_processing.R')
+sim_output_lake <- f_sim_output_lake(sim_output,inndata_sim1,Nsims)
+
+
 tmpout <- list()
 tmpout[["sim_output"]] <- sim_output
 tmpout[["inndata_sim1"]] <- inndata_sim1
