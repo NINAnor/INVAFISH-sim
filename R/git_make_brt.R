@@ -186,6 +186,10 @@ train.results.par <- train.results.par[order(train.results.par$cv.deviance,-trai
 # Results deviate when using %do% and %dopar%
 train.results.par #Includes a dataframe with ordered (numbered) choice based on AUC cv.dev and cv.AUC, be aware that there are mutiple ways of judging the models...
 
+
+# summed_likelyhood_for_non_introduction <- prod(1-ifelse(is.na(tmp_trans$prob_introduction),0,tmp_trans$prob_introduction))
+# summed_likelyhood_for_introduction <- 1 - summed_likelyhood_for_non_introduction
+
 # For Agder with 378 rows in data.table
 #tc     lr interaction.depth shrinkage n.trees   AUC cv.AUC deviance
 #2 0.0050                 2    0.0050     900 0.956  0.950    0.042
