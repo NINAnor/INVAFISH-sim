@@ -163,6 +163,7 @@ inndata_sim1 <- lake_env#[inndata$t_slot==unique(inndata$t_slot)[1],]
 #inndata_sim1<-as.data.frame(inndata_sim1)
 # Exterminate prosentage of present populations of focal species.
 
+
 if (percentage_exter > 0 & percentage_exter < 1.0) {
 inndata_sim1[ sample( which(inndata_sim1$Esox_lucius==1), round(percentage_exter*length(which(inndata_sim1$Esox_lucius==1)))), ]$Esox_lucius <- 0
 } else if (percentage_exter == 1.0) {
@@ -170,8 +171,13 @@ inndata_sim1[ sample( which(inndata_sim1$Esox_lucius==1), round(percentage_exter
 inndata_sim1[species_var] <- 0
 }
 
-source('./R/predict_introduction_events.R')
+#exterminate specific lakes
+exwaterbodyID<-c(2646158,3530010,2701067,3521235,2833551)
 
+inndata_sim1$Esox_lucius[inndata_sim1$waterBodyID %in% exwaterbodyID ] <- 0
+
+source('./R/predict_introduction_events.R')
+brt_mod <-brt_mod_heleNorge_simp_gjedde
 
 # j simulation runs...
 for(j in 1:Nsims){
@@ -192,7 +198,10 @@ for(j in 1:Nsims){
       introduction_lakes <- tmp_trans[tmp_trans$introduced==1,]$waterBodyID
       pike_lakes <- tmp_trans$waterBodyID[tmp_trans[species_var]==1]
       introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% pike_lakes]
-      introduction_lakes <- introduction_lakes[! introduction_lakes %in% analyse.df$waterBodyID[analyse.df$Esox_lucius==1]] # introduction_lakes[!is.na(introduction_lakes)]
+      introduction_lakes <- introduction_lakes[!is.na(introduction_lakes)]
+      #assign new introductions
+      tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% introduction_lakes,1,tmp_trans$introduced)
+      # introduction_lakes[!is.na(introduction_lakes)]
       #.............................................................
       # Downstream dispersal
       #.............................................................
@@ -212,7 +221,7 @@ for(j in 1:Nsims){
         #downstream_lakes <- downstream_lakes[!(downstream_lakes$downstream_lakes %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1]),]
         reachable_lakes_pike <- unique(reachable_lakes_pike$acclake[!(reachable_lakes_pike$acclake %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1])])
         # finally assign introduction to downstream lakes (without previous obs/intro)
-        tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% introduction_lakes,1,tmp_trans$introduced)
+
         tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% reachable_lakes_pike,1,tmp_trans$introduced)
 
         #.............................................................
@@ -257,7 +266,10 @@ for(j in 1:Nsims){
 
     # create variables to store
     intro <- tmp_trans$waterBodyID[tmp_trans$introduced==1]
+    intro_is_secondary <-0
+    if(with_secondary==TRUE){
     intro_is_secondary <- ifelse(intro %in% reachable_lakes_pike,TRUE,FALSE)
+    }
     time_slot_i <- rep(i,length(intro))
     sim_j <- rep(j,length(intro))
     start_year_i <- rep(( start_year+((i-1)*time_slot_length) ),
@@ -341,7 +353,7 @@ dataToWrite <- sim_output_lake
 #f_write_simresult_to_db(dataToWrite=sim_output_lake,nameOfTable)
 
 
-dbWriteTable(con, c("agder", "sim_out_lake_no_ext_5simu_test"), value=dataToWrite,overwrite=TRUE)
+dbWriteTable(con, c("agder", "sim_out_lake_with_ext_200simu_kmb"), value=dataToWrite,overwrite=TRUE)
 
 #dbWriteTable(con, c("temporary_agder", "sim_agder_output_esox_lucius"), as.data.frame(sim_output_lake))
 
