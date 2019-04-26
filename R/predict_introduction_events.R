@@ -21,7 +21,7 @@
 
 
 # use boosted regression tree
-f_predict_introduction_events_gmb <-function(outdata,brt_mod,species,temp_inc,start_year, end_year){
+f_predict_introduction_events_gmb <-function(outdata,brt_mod,species,summer_temp_inc,winter_temp_inc,start_year, end_year){
   require(gbm)
   require(stringr)
   require(dplyr)
@@ -31,7 +31,8 @@ f_predict_introduction_events_gmb <-function(outdata,brt_mod,species,temp_inc,st
   outdata$dist_to_closest_pop_log<-log(outdata$dist_to_closest_pop)
   data_no_pike<-outdata[outdata[[species2]] == 0,]
   data_w_pike<-outdata[outdata[[species2]] == 1,]
-  data_no_pike$eurolst_bio01<- data_no_pike$eurolst_bio10+temp_inc #increase annual mean summer temperature for the period (scale to eurolist_bio10)
+  data_no_pike$eurolst_bio10<- data_no_pike$eurolst_bio10+summer_temp_inc #increase annual mean summer temperature for the period (scale to eurolist_bio10)
+  data_no_pike$eurolst_bio11<- data_no_pike$eurolst_bio11+winter_temp_inc
   data_no_pike$prob_introduction<-predict.gbm(brt_mod,data_no_pike,n.trees=brt_mod$gbm.cal$best.trees, type="response")#make probabilties over the full period
   data_no_pike$prob_introduction<-data_no_pike$prob_introduction/(end_year-start_year) #annual estimates based on total introductions in time period
   data_no_pike$introduced<-rbinom(length(data_no_pike$prob_introduction), size = 1, prob=data_no_pike$prob_introduction)

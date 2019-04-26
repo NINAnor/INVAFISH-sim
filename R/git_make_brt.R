@@ -25,7 +25,7 @@ library(dismo)
 library(dplyr)
 library(doParallel)
 
-focal_species_var<-"gjedde"
+#focal_species_var<-"gjedde"
 #source("./R/f_geoselect.R")
 #outdata <- f_geoselect_inverse_spdf(geoselect="./Data/geoselect_native_Rutilus_rutilus.rds",inndata=outdata) #needs to be adressed
 # make spatial selection for model estimation - Norway minus Finnmark, Troms and Nordland.
@@ -34,19 +34,19 @@ focal_species_var<-"gjedde"
 # e.g.
 # outdata <- outdata_data_gjedde[outdata_data_gjedde$countryCode =="NO",]
 # or
-# outdata <- lake_env[lake_env$countryCode =="NO",]
+outdata <-inndata_timeslot[inndata_timeslot$countryCode =="NO",]  #lake_env[lake_env$countryCode =="NO",]
 
-outdata <- merge(inndata_timeslot[,c('waterBodyID')], lake_env, by='waterBodyID', all.y=FALSE)
+#outdata <- merge(inndata_timeslot[,c('waterBodyID')], lake_env, by='waterBodyID', all.y=FALSE)
 
 outdata$countryCode <- factor(outdata$countryCode)
 outdata <- outdata %>% filter(!(county %in% c("Finnmark","Troms","Nordland")))
-outdata <- outdata %>% filter((county %in% c("Aust-Agder","Vest-Agder","Telemark","Rogaland")))
+#outdata <- outdata %>% filter((county %in% c("Aust-Agder","Vest-Agder","Telemark","Rogaland")))
 outdata$county <- factor(outdata$county)
 # outdata <- outdata[outdata$minimumElevationInMeters>0,]
 # outdata$n_pop <- NA
 # outdata$n_pop <- ifelse(outdata$waterBodyID %in% geoselect_no_gjedde_pop_5000$waterBodyID,geoselect_no_gjedde_pop_5000$count,outdata$n_pop)
 
-covariates <- c("distance_to_road_log", "dist_to_closest_pop_log", "SCI", "eurolst_bio10", "buffer_5000m_population_2006" ,"area_km2_log", "n_pop")
+covariates <- c("distance_to_road_log", "dist_to_closest_pop_log", "SCI", "eurolst_bio10","eurolst_bio11", "buffer_5000m_population_2006" ,"area_km2_log", "n_pop")
 
 #focal_species_vec <- unique(outdata$focal_species)
 # remove all populations of focal species where focal species is present at start of time-slot
@@ -200,14 +200,14 @@ train.results.par #Includes a dataframe with ordered (numbered) choice based on 
 # Use best parametrization from train.results
 
 # brt_mod<-gbm.fixed(data=analyse.df, gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), gbm.y = "introduced",family = "bernoulli",tree.complexity = 9, learning.rate = 0.001,bag.fraction = 1,n.trees=4000)
-brt_mod<-gbm.step(data=analyse.df, gbm.x=covariates, gbm.y="introduced", family="bernoulli", tree.complexity=2, step.size=50, learning.rate=0.005, n.trees=100, max.trees=10000)
+brt_mod<-gbm.step(data=analyse.df, gbm.x=covariates, gbm.y="introduced", family="bernoulli", tree.complexity=8, step.size=100, learning.rate=0.025, n.trees=100, max.trees=4000)
 names(brt_mod$gbm.call)[1] <- "dataframe"
 
 predictors<-gbm.simplify(brt_mod,n.folds = 10, n.drops = "auto", alpha = 1, prev.stratify = TRUE,
                          eval.data = NULL, plot = TRUE)
 # Plot suggests to possibly also drop a second predictor (buffer_5000m_population_2006)
-brt_mod_simp<-gbm.step(data=analyse.df, gbm.x=predictors$pred.list[[1]], gbm.y="introduced", family="bernoulli", tree.complexity=6, step.size=50, learning.rate=0.001, n.trees=100, max.trees=10000)
+brt_mod_simp<-gbm.step(data=analyse.df, gbm.x=predictors$pred.list[[1]], gbm.y="introduced", family="bernoulli", tree.complexity=8, step.size=100, learning.rate=0.025, n.trees=100, max.trees=5000)
 #gbm.step(data=analyse.df, gbm.x = predictors$pred.list[[1]], gbm.y = "introduced",family = "bernoulli",tree.complexity = 8,step.size=100 ,learning.rate = 0.01,n.trees=1500)
 
 # save modell object as .rds
-saveRDS(brt_mod_simp,paste0(simdir, "/brt_mod_agder_",focal_species_var,".rds"))
+saveRDS(brt_mod_simp,paste0(simdir, "/brt_mod_norway_",focal_species_var,".rds"))
