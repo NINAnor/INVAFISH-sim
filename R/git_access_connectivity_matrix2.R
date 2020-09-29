@@ -1,4 +1,5 @@
-# F?r
+#!/usr/bin/env Rscript
+# Før
 # # get vector of wbID for upstream lakes
 # upstream_lakes <- connectivity$upstream_lakes[connectivity$waterBodyID %in% introduction_lakes]
 # upstream_lakes <- paste(upstream_lakes,sep=",",collapse=",")
@@ -58,22 +59,22 @@ library(pool)
 # N?
 
 ### Hent ut alle vannregioner (for Agder (mange inneholder ingen innsj?er)
-get_wrids <- function(db_conection) {
-  sql_string <- "SELECT DISTINCT ON (a.gid) a.gid AS wrid FROM \"Hydrography\".\"waterregions_dem_10m_nosefi\" AS a, (SELECT geom FROM \"AdministrativeUnits\".\"Fenoscandia_Municipality_polygon\" WHERE county IN ('Vest-Agder', 'Aust-Agder')) AS b WHERE ST_Intersects(a.geom, b.geom);"
+get_wrids <- function(db_conection, connectivity_schema, connectivity_table) {
+  sql_string <- paste0('SELECT DISTINCT ON (wrid) wrid FROM ', connectivity_schema, '.', connectivity_table, ';') 
   res <- dbGetQuery(db_conection, sql_string)[,1]
   res
 }
 # Eksempel
-wrids <- get_wrids(con)
+# wrids <- get_wrids(con, "fremmedfisk", "fremmedfisk_lake_connectivity_summary")
 
-### Hent ut data frame med kombinasjon av waterbodyID for alle innsj?er (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsj?er)
-get_wbid_wrid <- function(db_conection, eb_waterregionID) {
-  sql_string <- paste("SELECT id AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE ecco_biwa_wr IN (", toString(eb_waterregionID, sep=','), ")", sep='')
+### Hent ut data frame med kombinasjon av waterbodyID for alle innsj?er (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsjøer)
+get_wbid_wrid <- function(db_conection, connectivity_schema, connectivity_table) {
+  sql_string <- paste0('SELECT DISTINCT ON (wrid, "lakeID") wrid, "lakeID" FROM ', connectivity_schema, '.', connectivity_table, ';')
   res <- dbGetQuery(db_conection, sql_string)
   res
 }
 # Eksempel
-wbid_wrid <- get_wbid_wrid(con, wrids)
+# wbid_wrid <- get_wbid_wrid(con, "fremmedfisk", "fremmedfisk_lake_connectivity_summary")
 
 get_wbid_wrid_array <- function(db_conection, waterBodyID) {
   sql_string <- paste("SELECT array_to_string(array_agg(id), ',') AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE id IN (", toString(waterBodyID, sep=','), ") GROUP BY ecco_biwa_wr;", sep='')
