@@ -29,6 +29,7 @@ try(system(paste0('mkdir ', simdir)))
 
 focal_species <- "Esox lucius"
 focal_speciesid <- 26181
+focal_species_str <- gsub(" ", "_", focal_species)
 start_year <- 1967
 end_year <- 2017
 
@@ -69,6 +70,7 @@ con <- poolCheckout(pool)
 
 
 ### Hent ut alle vannregioner fra konnektivitetsmatrisa
+# Run git_access_connectivity_matrix2.R
 source('./R/git_access_connectivity_matrix2.R')
 wbid_wrid <- get_wbid_wrid(con, "fremmedfisk", "fremmedfisk_lake_connectivity_summary")
 
@@ -99,17 +101,13 @@ outdata_list <- wrangle_and_slice(inndata=inndata,start_year,end_year,focal_spec
 
 inndata_timeslot <- outdata_list$data
 
-# Run git_access_connectivity_matrix2.R
-source('./R/git_access_connectivity_matrix2.R')
-
-
 # Get lake environment data from get_lake_environment.R
 #add species to new loc_env dataframe based on outdata_data_gjedde
 source('./R/get_lake_environment.R')
 lake_env <- get_lake_environment(con, wbid_wrid$waterBodyID)
 
-lake_env$Esox_lucius <- inndata_timeslot$Esox_lucius[match(as.numeric(lake_env$waterBodyID), inndata_timeslot$waterBodyID)]
-lake_env$Esox_lucius[is.na(lake_env$Esox_lucius)] <- 0
+lake_env[focal_species_str] <- inndata_timeslot[focal_species_str][match(as.numeric(lake_env$waterBodyID), inndata_timeslot$waterBodyID),]
+lake_env[focal_species_str][is.na(lake_env[focal_species_str])] <- 0
 
 lake_env$introduced <- inndata_timeslot$introduced[match(as.numeric(lake_env$waterBodyID), inndata_timeslot$waterBodyID)]
 lake_env$introduced[is.na(lake_env$introduced)] <- 0
@@ -169,7 +167,7 @@ inndata_sim1 <- lake_env#[inndata$t_slot==unique(inndata$t_slot)[1],]
 
 
 if (percentage_exter > 0 & percentage_exter < 1.0) {
-inndata_sim1[ sample( which(inndata_sim1$Esox_lucius==1), round(percentage_exter*length(which(inndata_sim1$Esox_lucius==1)))), ]$Esox_lucius <- 0
+inndata_sim1[ sample( which(inndata_sim1[focal_species_str]==1), round(percentage_exter*length(which(inndata_sim1[focal_species_str]==1)))), ][focal_species_str] <- 0
 } else if (percentage_exter == 1.0) {
 # Exterminate all pressent populations in VFO Trondelag....
 inndata_sim1[species_var] <- 0
@@ -178,7 +176,7 @@ inndata_sim1[species_var] <- 0
 #exterminate specific lakes
 exwaterbodyID<-c(2646158,3530010,2701067,3521235,2833551)
 
-inndata_sim1$Esox_lucius[inndata_sim1$waterBodyID %in% exwaterbodyID ] <- 0
+inndata_sim1[focal_species_str][inndata_sim1$waterBodyID %in% exwaterbodyID ] <- 0
 
 source('./R/predict_introduction_events.R')
 brt_mod <-brt_mod_heleNorge_simp_gjedde
@@ -194,7 +192,7 @@ for(j in 1:Nsims){
 
     ### i.1 predict translocations and store new introductions in temp object
     tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,focal_species,temp_inc,start_year_sim, end_year_sim)
-    tmp_trans <- tmp_trans[!is.na(tmp_trans$Esox_lucius),]
+    tmp_trans <- tmp_trans[!is.na(tmp_trans[focal_species_str]),]
     # include secondary dispeersal?
     if(with_secondary==TRUE){
 
