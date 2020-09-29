@@ -68,20 +68,9 @@ pool <- dbPool(
 con <- poolCheckout(pool)
 
 
-
 ### Hent ut alle vannregioner fra konnektivitetsmatrisa
 source('./R/git_access_connectivity_matrix2.R')
 wbid_wrid <- get_wbid_wrid(con, "fremmedfisk", "fremmedfisk_lake_connectivity_summary")
-
-### Hent ut data frame med kombinasjon av waterbodyID for alle innsj?er (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsj?er)
-get_wbid_wrid <- function(db_conection, eb_waterregionID) {
-  sql_string <- paste("SELECT id AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE ecco_biwa_wr IN (", toString(eb_waterregionID, sep=','), ")", sep='')
-  res <- dbGetQuery(db_conection, sql_string)
-  res
-}
-# Eksempel
-wbid_wrid <- get_wbid_wrid(con, wrids)
-
 
 # From dataIO.R
 source('./R/dataIO.R')
@@ -95,7 +84,7 @@ geoselect_no_gjedde_pop_5000 <- dbGetQuery(con, paste0('SELECT al.id AS "waterBo
                                                   nofa.lake AS al,
                                            (SELECT geom FROM nofa.lake WHERE id IN (SELECT "waterBodyID" FROM nofa.get_last_occurrence_status(
                                            "taxonID" => ', focal_speciesid, ',
-                                           -- counties => \'Vest-Agder,Aust-Agder,Telemark,Rogaland\'
+                                           wrids => \'', gsub(" ", "", toString(unique(wbid_wrid$wrid))), '\'
                                            ))) AS ol
                                            WHERE ST_DWithin(al.geom, ol.geom, 5000)
                                            GROUP BY al.id'))
