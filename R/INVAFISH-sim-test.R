@@ -19,7 +19,7 @@ for (p in req_packages) {
     print(p)
   }
 }
-libraries(req_packages[2:length(req_packages)])
+libraries(req_packages)
 
 scriptdir <- '~/INVAFISH-sim/'
 setwd(scriptdir)
