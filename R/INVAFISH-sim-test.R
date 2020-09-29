@@ -39,23 +39,17 @@ pg_db <- 'nofa'
 host_msg <- 'Please enter host name:'
 user_msg <- 'Please enter your user name:'
 pw_msg <- "Please enter your password:"
-if (any(grepl("RStudio", .libPaths()))) {
+if (rstudioapi::isAvailable()) {
   pg_host <- rstudioapi::showPrompt(title='Hostname', message=host_msg, default='')
-} else {
-  # cat(paste0(host_msg, '\n'));
-  pg_host <- getPass(msg=host_msg)
-    # scan(what=character(), nmax=1, quiet=TRUE)
-}
-
-if (any(grepl("RStudio", .libPaths()))) {
   pg_user <- rstudioapi::showPrompt(title='Username', message=user_msg, default='')
+  pg_password <- rstudioapi::askForPassword(prompt=pw_msg)
+  } else {
 } else {
-  # cat(paste0(user_msg, '\n'));
+  pg_host <- getPass(msg=host_msg)
   pg_user <- getPass(msg=user_msg)
-  # scan(what=character(), nmax=1, quiet=TRUE)
+  pg_password <- getPass(msg=pw_msg)
 }
 
-pg_password <- getPass(msg=pw_msg)
 
 pool <- dbPool(
   drv = pg_drv,
