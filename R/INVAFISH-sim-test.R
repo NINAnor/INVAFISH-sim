@@ -133,8 +133,6 @@ source('./R/git_make_brt.R')
 # Select inndata geographic range based upon connectivity matrix extent
 #inndata <- loc_env[loc_env$waterBodyID %in% wbid_wrid$waterBodyID,]
 
-# species specific stuff
-species_var <- stringr::str_replace(focal_species," ","_") # variable describing present/absence of focal species
 
 temp_inc <- 0 # temperature increas
 
@@ -170,7 +168,7 @@ if (percentage_exter > 0 & percentage_exter < 1.0) {
 inndata_sim1[ sample( which(inndata_sim1[focal_species_str]==1), round(percentage_exter*length(which(inndata_sim1[focal_species_str]==1)))), ][focal_species_str] <- 0
 } else if (percentage_exter == 1.0) {
 # Exterminate all pressent populations in VFO Trondelag....
-inndata_sim1[species_var] <- 0
+inndata_sim1[focal_species_str] <- 0
 }
 
 #exterminate specific lakes
@@ -198,7 +196,7 @@ for(j in 1:Nsims){
 
       # get wbID from introductions in run i
       introduction_lakes <- tmp_trans[tmp_trans$introduced==1,]$waterBodyID
-      pike_lakes <- tmp_trans$waterBodyID[tmp_trans[species_var]==1]
+      pike_lakes <- tmp_trans$waterBodyID[tmp_trans[focal_species_str]==1]
       introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% pike_lakes]
       introduction_lakes <- introduction_lakes[!is.na(introduction_lakes)]
       #assign new introductions
@@ -220,8 +218,8 @@ for(j in 1:Nsims){
 
         #downstream_lakes <- get_downstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid))
         # select out downstream lakes that does not have species at start of time-slot
-        #downstream_lakes <- downstream_lakes[!(downstream_lakes$downstream_lakes %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1]),]
-        reachable_lakes_pike <- unique(reachable_lakes_pike$acclake[!(reachable_lakes_pike$acclake %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1])])
+        #downstream_lakes <- downstream_lakes[!(downstream_lakes$downstream_lakes %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1]),]
+        reachable_lakes_pike <- unique(reachable_lakes_pike$acclake[!(reachable_lakes_pike$acclake %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1])])
         # finally assign introduction to downstream lakes (without previous obs/intro)
 
         tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% reachable_lakes_pike,1,tmp_trans$introduced)
@@ -248,7 +246,7 @@ for(j in 1:Nsims){
 
         #upstream_lakes_reachable <- get_reachable_upstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid), slope_barrier)
         # select out upstream lakes that does not have species at start of time-slot
-        #upstream_lakes_reachable <- upstream_lakes_reachable[!(upstream_lakes_reachable$upstream_lake %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1]),]
+        #upstream_lakes_reachable <- upstream_lakes_reachable[!(upstream_lakes_reachable$upstream_lake %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1]),]
 
         # add upstream_lake intros to introduced vector
         #tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% upstream_lakes_reachable$upstream_lake,1,tmp_trans$introduced)
@@ -257,7 +255,7 @@ for(j in 1:Nsims){
       if(use_disp_probability==TRUE){
         lakes_reachable <-get_reachable_lakes_pike(con,unique(introduction_lakes))
         # select out upstream lakes that does not have species at start of time-slot
-        lakes_reachable <- lakes_reachable[!(lakes_reachable$accessible_lake %in% inndata_sim$waterBodyID[inndata_sim[species_var]==1]),]
+        lakes_reachable <- lakes_reachable[!(lakes_reachable$accessible_lake %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1]),]
         # add lake intros to introduced vector, based on probability
         tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% lakes_reachable$accessible_lake,rbinom(length(tmp_trans$waterBodyID), size = 1, prob=lakes_reachable$likelihood),tmp_trans$introduced)
       }
@@ -293,9 +291,9 @@ for(j in 1:Nsims){
     sim_output <- bind_rows(sim_output,tmp_output)
 
     ### modify inndata_sim with new introductions to provide innput to time_slot i+1
-    # Add new introductions to "species_var" column in inndata_sim
-    tmp1 <- inndata_sim[species_var]
-    inndata_sim[species_var][inndata_sim$waterBodyID %in% tmp_trans$waterBodyID[tmp_trans$introduced==1],] <- 1
+    # Add new introductions to "focal_species_str" column in inndata_sim
+    tmp1 <- inndata_sim[focal_species_str]
+    inndata_sim[focal_species_str][inndata_sim$waterBodyID %in% tmp_trans$waterBodyID[tmp_trans$introduced==1],] <- 1
 
     # recalculate distance to closest population and replace values
     # in inndata_sim where distance is smaller than previous;
@@ -341,17 +339,17 @@ tmpout[["time_slot_length"]] <- time_slot_length
 tmpout[["start_year"]] <- start_year
 
 # Write output to local disk
-url <- paste(simdir, "sim_out_",species_var,"_agder_5simu.rds",sep="")
+url <- paste(simdir, "sim_out_",focal_species_str,"_agder_5simu.rds",sep="")
 saveRDS(tmpout,url)
 
 # write output to BOX
 #library(boxr)
 #box_auth() # When run on server, create OAuth2.0 token locally and copy to server - see boxr vignett (remember .gitignore if needed)
-#box_ul(dir_id = 29103527607, file = paste("./Data/sim_out_",species_var,".rds",sep=""))
+#box_ul(dir_id = 29103527607, file = paste("./Data/sim_out_",focal_species_str,".rds",sep=""))
 
 # Write lake-specific summary to database
 dataToWrite <- sim_output_lake
-#nameOfTable <- tolower(paste("sim_output_",species_var,"_no_extermination_scenario",sep=""))
+#nameOfTable <- tolower(paste("sim_output_",focal_species_str,"_no_extermination_scenario",sep=""))
 #f_write_simresult_to_db(dataToWrite=sim_output_lake,nameOfTable)
 
 
