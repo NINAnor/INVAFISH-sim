@@ -32,6 +32,11 @@ focal_speciesid <- 26181
 start_year <- 1967
 end_year <- 2017
 
+
+conmat_schema <- "fremmedfisk"
+conmat_table <- "fremmedfisk_lake_connectivity"
+conmat_summary_table <- "fremmedfisk_lake_connectivity_summary"
+
 ### Setup database connection
 #Set connection parameters
 pg_drv <- RPostgreSQL::PostgreSQL()
@@ -63,6 +68,21 @@ pool <- dbPool(
 con <- poolCheckout(pool)
 
 
+
+### Hent ut alle vannregioner fra konnektivitetsmatrisa
+source('./R/git_access_connectivity_matrix2.R')
+wbid_wrid <- get_wbid_wrid(con, "fremmedfisk", "fremmedfisk_lake_connectivity_summary")
+
+### Hent ut data frame med kombinasjon av waterbodyID for alle innsj?er (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsj?er)
+get_wbid_wrid <- function(db_conection, eb_waterregionID) {
+  sql_string <- paste("SELECT id AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE ecco_biwa_wr IN (", toString(eb_waterregionID, sep=','), ")", sep='')
+  res <- dbGetQuery(db_conection, sql_string)
+  res
+}
+# Eksempel
+wbid_wrid <- get_wbid_wrid(con, wrids)
+
+
 # From dataIO.R
 source('./R/dataIO.R')
 get_inndata(serveradress=pg_host, datafolder=simdir)
@@ -71,13 +91,14 @@ inndata <- readRDS(paste0(simdir, "view_occurrence_by_event.rds", sep=''))
 # From get_geoselect_native.R
 source('./R/get_geoselect_native.R')
 geoselect_native <- get_historic_distribution(con, focal_speciesid)
-geoselect_no_gjedde_pop_5000 <- dbGetQuery(con, 'SELECT al.id AS "waterBodyID", count(ol.geom) FROM
+geoselect_no_gjedde_pop_5000 <- dbGetQuery(con, paste0('SELECT al.id AS "waterBodyID", count(ol.geom) FROM
                                                   nofa.lake AS al,
                                            (SELECT geom FROM nofa.lake WHERE id IN (SELECT "waterBodyID" FROM nofa.get_last_occurrence_status(
-                                           "taxonID" => 26181,
-                                           counties => \'Vest-Agder,Aust-Agder,Telemark,Rogaland\'))) AS ol
+                                           "taxonID" => ', focal_speciesid, ',
+                                           -- counties => \'Vest-Agder,Aust-Agder,Telemark,Rogaland\'
+                                           ))) AS ol
                                            WHERE ST_DWithin(al.geom, ol.geom, 5000)
-                                           GROUP BY al.id')
+                                           GROUP BY al.id'))
 
 #paste0("SELECT * FROM nofa.number_populations_5000m_pike WHERE \"waterBodyID\" IN (",toString(),")")
 
