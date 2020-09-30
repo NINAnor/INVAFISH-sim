@@ -201,8 +201,8 @@ for(j in 1:Nsims){
 
       # get wbID from introductions in run i
       introduction_lakes <- tmp_trans[tmp_trans$introduced==1,]$waterBodyID
-      pike_lakes <- tmp_trans$waterBodyID[tmp_trans[focal_species_str]==1]
-      introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% pike_lakes]
+      species_lakes <- tmp_trans$waterBodyID[tmp_trans[focal_species_str]==1]
+      introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% species_lakes]
       introduction_lakes <- introduction_lakes[!is.na(introduction_lakes)]
       #assign new introductions
       tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% introduction_lakes,1,tmp_trans$introduced)
@@ -218,8 +218,8 @@ for(j in 1:Nsims){
 
       # select out downstream lakes that does not have species at start of time-slot
       if(use_slope_barrier==TRUE){
-        # wbid_wrid_array <- get_wbid_wrid_array(con, pike_lakes)
-        reachable_lakes_species <- get_reachable_lakes_wbid(con, pike_lakes, slope_barrier)
+        # wbid_wrid_array <- get_wbid_wrid_array(con, species_lakes)
+        reachable_lakes_species <- get_reachable_lakes(con, introduction_wrid, introduction_lakes, "slope_max_max", slope_barrier, conmat_schema, conmat_table)
 
         #downstream_lakes <- get_downstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid))
         # select out downstream lakes that does not have species at start of time-slot
@@ -300,6 +300,10 @@ for(j in 1:Nsims){
     tmp1 <- inndata_sim[focal_species_str]
     inndata_sim[focal_species_str][inndata_sim$waterBodyID %in% tmp_trans$waterBodyID[tmp_trans$introduced==1],] <- 1
 
+    
+    # n_pop should be recalculated as well!!!
+    
+    
     # recalculate distance to closest population and replace values
     # in inndata_sim where distance is smaller than previous;
     # i.e. accounting for situations where closest population is outside
@@ -358,7 +362,7 @@ dataToWrite <- sim_output_lake
 #f_write_simresult_to_db(dataToWrite=sim_output_lake,nameOfTable)
 
 
-dbWriteTable(con, c("agder", "sim_out_lake_with_ext_200simu_kmb"), value=dataToWrite,overwrite=TRUE)
+dbWriteTable(con, c(conmat_schema, paste0("sim_out_lake_", tolower(focal_species_str) ,"_without_ext_",Nsims,"simu"), value=dataToWrite,overwrite=TRUE)
 
 #dbWriteTable(con, c("temporary_agder", "sim_agder_output_esox_lucius"), as.data.frame(sim_output_lake))
 
