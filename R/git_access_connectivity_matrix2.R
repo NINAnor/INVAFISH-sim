@@ -136,8 +136,9 @@ get_reachable_lakes_liklihood_pike <- function(db_conection, waterbodyID) {
 # Eksempel
 #accessible_lakes_likelihood_pike <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]))
 
-get_reachable_lakes <- function(db_conection, waterbodyID, slope_barrier) {
-  sql_string <- paste("SELECT DISTINCT ON (accessible_lakes) accessible_lakes_threshold(lake, ", slope_barrier, ") AS accessible_lakes FROM (SELECT unnest(ARRAY[", toString(waterbodyID, sep=','),"]) AS lake) AS x;", sep='')
+get_reachable_lakes <- function(db_conection, wrid, waterbodyID, slope_measure, slope_threshold, conmat_schema, conmat_table) {
+  sql_string <- paste("SELECT DISTINCT ON (accessible_lakes) nofa.accessible_lakes_threshold_2(unnest(ARRAY[", toString(wrid, sep=','), "]), unnest(ARRAY[", toString(waterBodyID, sep=','), "]), CAST('", slope_measure, "' AS text), ", slope_threshold, ", CAST('", conmat_schema, "' AS text), CAST('", conmat_table, "' AS text)) AS accessible_lakes", sep='')
+  print(sql_string)
   res <- dbGetQuery(db_conection, sql_string)
   res
 }
@@ -146,7 +147,7 @@ get_reachable_lakes <- function(db_conection, waterbodyID, slope_barrier) {
 #reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 700)
 # Eksempel (get only downstream or adjacent lakes)
 #reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 0)
-get_reachable_lakes_wbid <- function(db_conection, waterbodyID, slope_barrier) {
+get_reachable_lakes_wbid <- function(db_conection, waterbodyID, slope_barrier, conmat_schema, conmat_table) {
   sql_string <- paste0('SELECT c."waterBodyID" AS source, l.to_lake AS acclake
       FROM agder.lake_connectivity AS l,
 (
