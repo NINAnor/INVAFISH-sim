@@ -210,4 +210,4 @@ brt_mod_simp<-gbm.step(data=analyse.df, gbm.x=predictors$pred.list[[1]], gbm.y="
 #gbm.step(data=analyse.df, gbm.x = predictors$pred.list[[1]], gbm.y = "introduced",family = "bernoulli",tree.complexity = 8,step.size=100 ,learning.rate = 0.01,n.trees=1500)
 
 # save modell object as .rds
-saveRDS(brt_mod_simp,paste0(simdir, "/brt_mod_norway_",focal_species_var,".rds"))
+saveRDS(brt_mod_simp,paste0(simdir, "/brt_mod_norway_",focal_species_str,".rds"))
