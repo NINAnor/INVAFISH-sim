@@ -175,12 +175,14 @@ inndata_sim1[focal_species_str] <- 0
 }
 
 #exterminate specific lakes
-exwaterbodyID<-c(2646158,3530010,2701067,3521235,2833551)
+exwaterbodyID <- NA # c(2646158,3530010,2701067,3521235,2833551)
 
+if(!is.na(exwaterbodyID)) {
 inndata_sim1[focal_species_str][inndata_sim1$waterBodyID %in% exwaterbodyID ] <- 0
+}
 
-source('./R/predict_introduction_events.R')
-brt_mod <-brt_mod_heleNorge_simp_gjedde
+source('./R/git_predict_introduction_events.R')
+brt_mod <-brt_mod_simp
 
 # j simulation runs...
 for(j in 1:Nsims){
@@ -192,7 +194,7 @@ for(j in 1:Nsims){
   for(i in 1:n_time_slots){
 
     ### i.1 predict translocations and store new introductions in temp object
-    tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,focal_species,temp_inc,start_year_sim, end_year_sim)
+    tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,focal_species,temp_inc,start_year_sim)
     tmp_trans <- tmp_trans[!is.na(tmp_trans[focal_species_str]),]
     # include secondary dispeersal?
     if(with_secondary==TRUE){
@@ -217,15 +219,15 @@ for(j in 1:Nsims){
       # select out downstream lakes that does not have species at start of time-slot
       if(use_slope_barrier==TRUE){
         # wbid_wrid_array <- get_wbid_wrid_array(con, pike_lakes)
-        reachable_lakes_pike <- get_reachable_lakes_wbid(con, pike_lakes, slope_barrier)
+        reachable_lakes_species <- get_reachable_lakes_wbid(con, pike_lakes, slope_barrier)
 
         #downstream_lakes <- get_downstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid))
         # select out downstream lakes that does not have species at start of time-slot
         #downstream_lakes <- downstream_lakes[!(downstream_lakes$downstream_lakes %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1]),]
-        reachable_lakes_pike <- unique(reachable_lakes_pike$acclake[!(reachable_lakes_pike$acclake %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1])])
+        reachable_lakes_species <- unique(reachable_lakes_species$acclake[!(reachable_lakes_species$acclake %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1])])
         # finally assign introduction to downstream lakes (without previous obs/intro)
 
-        tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% reachable_lakes_pike,1,tmp_trans$introduced)
+        tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% reachable_lakes_species,1,tmp_trans$introduced)
 
         #.............................................................
         # Upstream dispersal - NB! Check this part.... unequal length of upstream_lakes and upstream_slopes vector!!!!
@@ -256,7 +258,7 @@ for(j in 1:Nsims){
       }
       ##..or dispersal probability based on analyses from Sam and Stefan
       if(use_disp_probability==TRUE){
-        lakes_reachable <-get_reachable_lakes_pike(con,unique(introduction_lakes))
+        lakes_reachable <-get_reachable_lakes_species(con,unique(introduction_lakes))
         # select out upstream lakes that does not have species at start of time-slot
         lakes_reachable <- lakes_reachable[!(lakes_reachable$accessible_lake %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1]),]
         # add lake intros to introduced vector, based on probability
@@ -271,7 +273,7 @@ for(j in 1:Nsims){
     intro <- tmp_trans$waterBodyID[tmp_trans$introduced==1]
     intro_is_secondary <-0
     if(with_secondary==TRUE){
-    intro_is_secondary <- ifelse(intro %in% reachable_lakes_pike,TRUE,FALSE)
+    intro_is_secondary <- ifelse(intro %in% reachable_lakes_species,TRUE,FALSE)
     }
     time_slot_i <- rep(i,length(intro))
     sim_j <- rep(j,length(intro))
