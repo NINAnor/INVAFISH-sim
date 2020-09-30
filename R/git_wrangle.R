@@ -184,7 +184,8 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   
   inndata4 <- inndata3 %>%
     group_by(waterBodyID,county,municipality,countryCode) %>%
-    summarise(dist_to_closest_pop=mean(dist_to_closest_pop))
+    summarise(dist_to_closest_pop=mean(dist_to_closest_pop),
+              n_pop=mean(n_pop))
   
   # get presence/absence aggregated for each time-slot,waterBody and focal species
   # and join to outdata_timeslot
@@ -201,6 +202,7 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   colsToRemove <- specieslist2[colSums(aggdata2[specieslist2])==0]
   aggdata2 <- aggdata2[!names(aggdata2) %in% colsToRemove]
   aggdata2 <- aggdata2 %>% dplyr::select(-dist_to_closest_pop)
+  aggdata2 <- aggdata2 %>% dplyr::select(-n_pop)
   
   # link back to waterbody etc...
   aggdata3 <- left_join(inndata4,aggdata2,by="waterBodyID")
