@@ -49,7 +49,6 @@ if (rstudioapi::isAvailable()) {
   pg_host <- rstudioapi::showPrompt(title='Hostname', message=host_msg, default='')
   pg_user <- rstudioapi::showPrompt(title='Username', message=user_msg, default='')
   pg_password <- rstudioapi::askForPassword(prompt=pw_msg)
-  } else {
 } else {
   pg_host <- getPass(msg=host_msg)
   pg_user <- getPass(msg=user_msg)
@@ -79,6 +78,7 @@ source('./R/dataIO.R')
 get_inndata(serveradress=pg_host, datafolder=simdir)
 inndata <- readRDS(paste0(simdir, "view_occurrence_by_event.rds", sep=''))
 
+
 # From get_geoselect_native.R
 source('./R/get_geoselect_native.R')
 geoselect_native <- get_historic_distribution(con, focal_speciesid)
@@ -90,7 +90,10 @@ geoselect_no_gjedde_pop_5000 <- dbGetQuery(con, paste0('SELECT al.id AS "waterBo
                                            ))) AS ol
                                            WHERE ST_DWithin(al.geom, ol.geom, 5000)
                                            GROUP BY al.id'))
+names(geoselect_no_gjedde_pop_5000)[2] = "n_pop"
 
+inndata <- merge(inndata, geoselect_no_gjedde_pop_5000, all.x=TRUE)
+inndata["n_pop"][is.na(inndata["n_pop"])] <- 0
 #paste0("SELECT * FROM nofa.number_populations_5000m_pike WHERE \"waterBodyID\" IN (",toString(),")")
 
 # From git_wrangle.R
