@@ -141,7 +141,8 @@ Nsims <- 20 # number of iterations
 sim_duration <- 1 # Duration of the scenario, in years (will be corced to multiple of time_slot_length)
 time_slot_length <- 50 # Duration of the time-slot, in years (time-span of each time-slot)
 gmb_time_slot_length <- 50 # Duration of the time-slot, in years, used to estimate establishment probability
-n_time_slots <- 2#as.integer(sim_duration/time_slot_length)
+n_time_slots <- 2
+#as.integer(sim_duration/time_slot_length)
 start_year_sim <- 2017
 end_year_sim <- start_year_sim + time_slot_length
 # secondary dispersal stuff
@@ -176,8 +177,8 @@ exwaterbodyID<-c(2646158,3530010,2701067,3521235,2833551)
 
 inndata_sim1[focal_species_str][inndata_sim1$waterBodyID %in% exwaterbodyID ] <- 0
 
-source('./R/predict_introduction_events.R')
-brt_mod <-brt_mod_heleNorge_simp_gjedde
+source('./R/git_predict_introduction_events.R')
+brt_mod <-brt_mod_simp
 
 # j simulation runs...
 for(j in 1:Nsims){
