@@ -354,7 +354,7 @@ dataToWrite <- sim_output_lake
 #f_write_simresult_to_db(dataToWrite=sim_output_lake,nameOfTable)
 
 
-dbWriteTable(con, c("agder", "sim_out_lake_with_ext_200simu_kmb"), value=dataToWrite,overwrite=TRUE)
+dbWriteTable(con, c("fremmedfisk", "sim_gjedde_telemark_300"), value=dataToWrite,overwrite=TRUE)
 
 #dbWriteTable(con, c("temporary_agder", "sim_agder_output_esox_lucius"), as.data.frame(sim_output_lake))
 
