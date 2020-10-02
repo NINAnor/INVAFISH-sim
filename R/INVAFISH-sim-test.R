@@ -156,8 +156,6 @@ percentage_exter <- 0.0 # Give the percentage of focal species populations one w
 use_slope_barrier<-TRUE
 use_disp_probability<-FALSE
 
-
-
 # Before each simulation run!!!!
 # Create new dataframe / vars for simulation bookkeeping.
 # Use latest time-slot (if multiple) in inndata
@@ -203,7 +201,12 @@ for(j in 1:Nsims){
       introduction_lakes <- tmp_trans[tmp_trans$introduced==1,]$waterBodyID
       species_lakes <- tmp_trans$waterBodyID[tmp_trans[focal_species_str]==1]
       introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% species_lakes]
-      introduction_lakes <- introduction_lakes[!is.na(introduction_lakes)]
+      species_wrid_wbid <- wbid_wrid[wbid_wrid$waterBodyID %in% species_lakes,]
+      disperse_input <- species_wrid_wbid %>%
+           group_by(wrid) %>%
+           summarise(waterBodyIDs = toString(waterBodyID))
+      
+      introduction_lakes <- wbid_wrid$waterBodyID[wbid_wrid$waterBodyID %in% species_lakes]
       #assign new introductions
       tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% introduction_lakes,1,tmp_trans$introduced)
       # introduction_lakes[!is.na(introduction_lakes)]
@@ -219,7 +222,7 @@ for(j in 1:Nsims){
       # select out downstream lakes that does not have species at start of time-slot
       if(use_slope_barrier==TRUE){
         # wbid_wrid_array <- get_wbid_wrid_array(con, species_lakes)
-        reachable_lakes_species <- get_reachable_lakes(con, introduction_wrid, introduction_lakes, "slope_max_max", slope_barrier, conmat_schema, conmat_table)
+        reachable_lakes_species <- get_reachable_lakes(con, disperse_input$wrid, disperse_input$waterBodyIDs, "slope_max_max", slope_barrier, conmat_schema, conmat_table)
 
         #downstream_lakes <- get_downstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid))
         # select out downstream lakes that does not have species at start of time-slot
