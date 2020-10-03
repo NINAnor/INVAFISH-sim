@@ -116,8 +116,8 @@ lake_env$introduced <- inndata_timeslot$introduced[match(as.numeric(lake_env$wat
 lake_env$introduced[is.na(lake_env$introduced)] <- 0
 
 lake_env <- merge(lake_env, geoselect_no_gjedde_pop_5000, by="waterBodyID", all.x=TRUE)
-lake_env$count <- lake_env$count - 1
-lake_env$n_pop <- ifelse(is.na(lake_env$count), 0, lake_env$count)
+lake_env$n_pop <- lake_env$n_pop - 1
+lake_env$n_pop <- ifelse(is.na(lake_env$n_pop), 0, lake_env$n_pop)
 
 #add recalculated closest distance based on new data
 source('./R/f_calc_distance.R')
@@ -303,10 +303,10 @@ for(j in 1:Nsims){
     tmp1 <- inndata_sim[focal_species_str]
     inndata_sim[focal_species_str][inndata_sim$waterBodyID %in% tmp_trans$waterBodyID[tmp_trans$introduced==1],] <- 1
 
-    
+
     # n_pop should be recalculated as well!!!
-    
-    
+
+
     # recalculate distance to closest population and replace values
     # in inndata_sim where distance is smaller than previous;
     # i.e. accounting for situations where closest population is outside
