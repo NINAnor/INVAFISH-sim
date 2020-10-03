@@ -227,7 +227,7 @@ for(j in 1:Nsims){
         #downstream_lakes <- get_downstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid))
         # select out downstream lakes that does not have species at start of time-slot
         #downstream_lakes <- downstream_lakes[!(downstream_lakes$downstream_lakes %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1]),]
-        reachable_lakes_species <- unique(reachable_lakes_species$acclake[!(reachable_lakes_species$acclake %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1])])
+        reachable_lakes_species <- setdiff(reachable_lakes_species[,1], inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1])
         # finally assign introduction to downstream lakes (without previous obs/intro)
 
         tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% reachable_lakes_species,1,tmp_trans$introduced)
