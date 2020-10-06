@@ -21,6 +21,6 @@ get_historic_distribution <- function(connection, taxonID) {
   species_native <- get_postgis_query(con, paste0('SELECT
                                                  ST_Transform(geom, 4326) AS geom, occurrence
                                                  FROM nofa."l_taxon_historicDistribution"
-                                                 WHERE "taxonID" = ', taxonID),  geom_name = "geom")
+                                                 WHERE occurrence > 1 AND "taxonID" = ', taxonID),  geom_name = "geom")
   species_native
 }
