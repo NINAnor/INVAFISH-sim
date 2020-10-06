@@ -27,9 +27,8 @@ setwd(scriptdir)
 simdir <- '~/temp/'
 try(system(paste0('mkdir ', simdir)))
 
-focal_species <- "Esox lucius"
 focal_speciesid <- 26181
-focal_species_str <- gsub(" ", "_", focal_species)
+
 start_year <- 1967
 end_year <- 2017
 
@@ -67,6 +66,9 @@ pool <- dbPool(
 
 con <- poolCheckout(pool)
 
+
+focal_species <- dbGetQuery(con, paste0('SELECT "scientificName" FROM nofa.l_taxon WHERE "taxonID" = ', focal_speciesid, ';'))[,1]
+focal_species_str <- gsub(" ", "_", focal_species)
 
 ### Hent ut alle vannregioner fra konnektivitetsmatrisa
 # Run git_access_connectivity_matrix2.R
@@ -261,7 +263,7 @@ for(j in 1:Nsims){
       }
       ##..or dispersal probability based on analyses from Sam and Stefan
       if(use_disp_probability==TRUE){
-        lakes_reachable <-get_reachable_lakes_species(con,unique(introduction_lakes))
+        lakes_reachable <- get_reachable_lakes_species(con,unique(introduction_lakes))
         # select out upstream lakes that does not have species at start of time-slot
         lakes_reachable <- lakes_reachable[!(lakes_reachable$accessible_lake %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1]),]
         # add lake intros to introduced vector, based on probability
@@ -305,8 +307,12 @@ for(j in 1:Nsims){
 
 
     # n_pop should be recalculated as well!!!
-
-
+    #system.time(geoselect_no_gjedde_pop_5000 <- dbGetQuery(con, paste0('SELECT al.id AS "waterBodyID", count(ol.geom) FROM
+    #                                       (SELECT id, geom FROM nofa.lake WHERE ecco_biwa_wr IN (',toString(unique(wbid_wrid$wrid)),')) AS al,
+    #                                       (SELECT geom FROM nofa.lake WHERE id IN (', toString(unique(intro)), ')) AS ol
+    #                                       WHERE ST_DWithin(al.geom, ol.geom, 5000) GROUP BY al.id'))
+    #)
+    
     # recalculate distance to closest population and replace values
     # in inndata_sim where distance is smaller than previous;
     # i.e. accounting for situations where closest population is outside
@@ -351,7 +357,7 @@ tmpout[["time_slot_length"]] <- time_slot_length
 tmpout[["start_year"]] <- start_year
 
 # Write output to local disk
-url <- paste(simdir, "sim_out_",focal_species_str,"_agder_5simu.rds",sep="")
+url <- paste(simdir, "sim_out_",focal_species_str,"_fremmedfisk_5simu.rds",sep="")
 saveRDS(tmpout,url)
 
 # write output to BOX
@@ -365,7 +371,7 @@ dataToWrite <- sim_output_lake
 #f_write_simresult_to_db(dataToWrite=sim_output_lake,nameOfTable)
 
 
-dbWriteTable(con, c(conmat_schema, paste0("sim_out_lake_", tolower(focal_species_str) ,"_without_ext_",Nsims,"simu"), value=dataToWrite,overwrite=TRUE)
+dbWriteTable(con, c(conmat_schema, paste0("sim_out_lake_", tolower(focal_species_str) ,"_without_ext_",Nsims,"simu")), value=dataToWrite,overwrite=TRUE)
 
 #dbWriteTable(con, c("temporary_agder", "sim_agder_output_esox_lucius"), as.data.frame(sim_output_lake))
 
