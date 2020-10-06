@@ -74,7 +74,7 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   # Note: clipping spatial data in R by using [] from http://robinlovelace.net/r/2014/07/29/clipping-with-r.html
   inndata_geoselect <- inndata_species[geoselect_spdf, ]
   
-  inndata$establishmentMeans <- ifelse(inndata$waterBodyID %in% inndata_geoselect@data$waterBodyID & inndata$scientificName==focal_species,"introduced",
+  inndata$establishmentMeans <- ifelse(!(inndata$waterBodyID %in% inndata_geoselect@data$waterBodyID) & inndata$scientificName==focal_species,"introduced",
                                        "native")
   
   
