@@ -140,7 +140,7 @@ source('./R/git_make_brt.R')
 temp_inc <- 0 # temperature increas
 
 # simulation and time specific stuff
-Nsims <- 200 # number of iterations
+Nsims <- 300 # number of iterations
 sim_duration <- 1 # Duration of the scenario, in years (will be corced to multiple of time_slot_length)
 time_slot_length <- 50 # Duration of the time-slot, in years (time-span of each time-slot)
 gmb_time_slot_length <- 50 # Duration of the time-slot, in years, used to estimate establishment probability
@@ -205,7 +205,7 @@ for(j in 1:Nsims){
       disperse_input <- species_wrid_wbid %>%
            group_by(wrid) %>%
            summarise(waterBodyIDs = toString(waterBodyID))
-      
+
       introduction_lakes <- wbid_wrid$waterBodyID[wbid_wrid$waterBodyID %in% species_lakes]
       #assign new introductions
       tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% introduction_lakes,1,tmp_trans$introduced)
@@ -351,7 +351,7 @@ tmpout[["time_slot_length"]] <- time_slot_length
 tmpout[["start_year"]] <- start_year
 
 # Write output to local disk
-url <- paste(simdir, "sim_out_",focal_species_str,"_agder_5simu.rds",sep="")
+url <- paste(simdir, "sim_out_",focal_species_str,"_telemark_300simu.rds",sep="")
 saveRDS(tmpout,url)
 
 # write output to BOX
@@ -365,7 +365,7 @@ dataToWrite <- sim_output_lake
 #f_write_simresult_to_db(dataToWrite=sim_output_lake,nameOfTable)
 
 
-dbWriteTable(con, c(conmat_schema, paste0("sim_out_lake_", tolower(focal_species_str) ,"_without_ext_",Nsims,"simu"), value=dataToWrite,overwrite=TRUE)
+dbWriteTable(con, c(conmat_schema, paste0("sim_out_lake_", tolower(focal_species_str) ,"_without_ext_",Nsims,"simu"), value=dataToWrite,overwrite=TRUE))
 
 #dbWriteTable(con, c("temporary_agder", "sim_agder_output_esox_lucius"), as.data.frame(sim_output_lake))
 
