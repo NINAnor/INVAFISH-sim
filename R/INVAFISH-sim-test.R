@@ -7,7 +7,7 @@ if (!require('devtools', character.only=T, quietly=T)) {
 if (!require('easypackages', character.only=T, quietly=T)) {
   devtools::install_github("jakesherman/easypackages")
   require('easypackages')
-  }
+}
 
 library(easypackages)
 
@@ -27,9 +27,8 @@ setwd(scriptdir)
 simdir <- '~/temp/'
 try(system(paste0('mkdir ', simdir)))
 
-focal_species <- "Esox lucius"
 focal_speciesid <- 26181
-focal_species_str <- gsub(" ", "_", focal_species)
+
 start_year <- 1967
 end_year <- 2017
 
@@ -49,7 +48,6 @@ if (rstudioapi::isAvailable()) {
   pg_host <- rstudioapi::showPrompt(title='Hostname', message=host_msg, default='')
   pg_user <- rstudioapi::showPrompt(title='Username', message=user_msg, default='')
   pg_password <- rstudioapi::askForPassword(prompt=pw_msg)
-  } else {
 } else {
   pg_host <- getPass(msg=host_msg)
   pg_user <- getPass(msg=user_msg)
@@ -69,6 +67,9 @@ pool <- dbPool(
 con <- poolCheckout(pool)
 
 
+focal_species <- dbGetQuery(con, paste0('SELECT "scientificName" FROM nofa.l_taxon WHERE "taxonID" = ', focal_speciesid, ';'))[,1]
+focal_species_str <- gsub(" ", "_", focal_species)
+
 ### Hent ut alle vannregioner fra konnektivitetsmatrisa
 # Run git_access_connectivity_matrix2.R
 source('./R/git_access_connectivity_matrix2.R')
@@ -78,6 +79,7 @@ wbid_wrid <- get_wbid_wrid(con, "fremmedfisk", "fremmedfisk_lake_connectivity_su
 source('./R/dataIO.R')
 get_inndata(serveradress=pg_host, datafolder=simdir)
 inndata <- readRDS(paste0(simdir, "view_occurrence_by_event.rds", sep=''))
+
 
 # From get_geoselect_native.R
 source('./R/get_geoselect_native.R')
@@ -90,7 +92,10 @@ geoselect_no_gjedde_pop_5000 <- dbGetQuery(con, paste0('SELECT al.id AS "waterBo
                                            ))) AS ol
                                            WHERE ST_DWithin(al.geom, ol.geom, 5000)
                                            GROUP BY al.id'))
+names(geoselect_no_gjedde_pop_5000)[2] = "n_pop"
 
+inndata <- merge(inndata, geoselect_no_gjedde_pop_5000, all.x=TRUE)
+inndata["n_pop"][is.na(inndata["n_pop"])] <- 0
 #paste0("SELECT * FROM nofa.number_populations_5000m_pike WHERE \"waterBodyID\" IN (",toString(),")")
 
 # From git_wrangle.R
@@ -113,8 +118,8 @@ lake_env$introduced <- inndata_timeslot$introduced[match(as.numeric(lake_env$wat
 lake_env$introduced[is.na(lake_env$introduced)] <- 0
 
 lake_env <- merge(lake_env, geoselect_no_gjedde_pop_5000, by="waterBodyID", all.x=TRUE)
-lake_env$count <- lake_env$count - 1
-lake_env$n_pop <- ifelse(is.na(lake_env$count), 0, lake_env$count)
+lake_env$n_pop <- lake_env$n_pop - 1
+lake_env$n_pop <- ifelse(is.na(lake_env$n_pop), 0, lake_env$n_pop)
 
 #add recalculated closest distance based on new data
 source('./R/f_calc_distance.R')
@@ -137,12 +142,11 @@ source('./R/git_make_brt.R')
 temp_inc <- 0 # temperature increas
 
 # simulation and time specific stuff
-Nsims <- 20 # number of iterations
+Nsims <- 200 # number of iterations
 sim_duration <- 1 # Duration of the scenario, in years (will be corced to multiple of time_slot_length)
 time_slot_length <- 50 # Duration of the time-slot, in years (time-span of each time-slot)
 gmb_time_slot_length <- 50 # Duration of the time-slot, in years, used to estimate establishment probability
-n_time_slots <- 2
-#as.integer(sim_duration/time_slot_length)
+n_time_slots <- 2#as.integer(sim_duration/time_slot_length)
 start_year_sim <- 2017
 end_year_sim <- start_year_sim + time_slot_length
 # secondary dispersal stuff
@@ -154,8 +158,6 @@ percentage_exter <- 0.0 # Give the percentage of focal species populations one w
 use_slope_barrier<-TRUE
 use_disp_probability<-FALSE
 
-
-
 # Before each simulation run!!!!
 # Create new dataframe / vars for simulation bookkeeping.
 # Use latest time-slot (if multiple) in inndata
@@ -166,16 +168,18 @@ inndata_sim1 <- lake_env#[inndata$t_slot==unique(inndata$t_slot)[1],]
 
 
 if (percentage_exter > 0 & percentage_exter < 1.0) {
-inndata_sim1[ sample( which(inndata_sim1[focal_species_str]==1), round(percentage_exter*length(which(inndata_sim1[focal_species_str]==1)))), ][focal_species_str] <- 0
+  inndata_sim1[ sample( which(inndata_sim1[focal_species_str]==1), round(percentage_exter*length(which(inndata_sim1[focal_species_str]==1)))), ][focal_species_str] <- 0
 } else if (percentage_exter == 1.0) {
-# Exterminate all pressent populations in VFO Trondelag....
-inndata_sim1[focal_species_str] <- 0
+  # Exterminate all pressent populations in VFO Trondelag....
+  inndata_sim1[focal_species_str] <- 0
 }
 
 #exterminate specific lakes
-exwaterbodyID<-c(2646158,3530010,2701067,3521235,2833551)
+exwaterbodyID <- NA # c(2646158,3530010,2701067,3521235,2833551)
 
-inndata_sim1[focal_species_str][inndata_sim1$waterBodyID %in% exwaterbodyID ] <- 0
+if(!is.na(exwaterbodyID)) {
+  inndata_sim1[focal_species_str][inndata_sim1$waterBodyID %in% exwaterbodyID ] <- 0
+}
 
 source('./R/git_predict_introduction_events.R')
 brt_mod <-brt_mod_simp
@@ -190,16 +194,21 @@ for(j in 1:Nsims){
   for(i in 1:n_time_slots){
 
     ### i.1 predict translocations and store new introductions in temp object
-    tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,focal_species,temp_inc)
+    tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,focal_species,temp_inc,start_year_sim)
     tmp_trans <- tmp_trans[!is.na(tmp_trans[focal_species_str]),]
     # include secondary dispeersal?
     if(with_secondary==TRUE){
 
       # get wbID from introductions in run i
       introduction_lakes <- tmp_trans[tmp_trans$introduced==1,]$waterBodyID
-      pike_lakes <- tmp_trans$waterBodyID[tmp_trans[focal_species_str]==1]
-      introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% pike_lakes]
-      introduction_lakes <- introduction_lakes[!is.na(introduction_lakes)]
+      species_lakes <- tmp_trans$waterBodyID[tmp_trans[focal_species_str]==1]
+      introduction_wrid <- wbid_wrid$wrid[wbid_wrid$waterBodyID %in% species_lakes]
+      species_wrid_wbid <- wbid_wrid[wbid_wrid$waterBodyID %in% species_lakes,]
+      disperse_input <- species_wrid_wbid %>%
+        group_by(wrid) %>%
+        summarise(waterBodyIDs = toString(waterBodyID))
+
+      introduction_lakes <- wbid_wrid$waterBodyID[wbid_wrid$waterBodyID %in% species_lakes]
       #assign new introductions
       tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% introduction_lakes,1,tmp_trans$introduced)
       # introduction_lakes[!is.na(introduction_lakes)]
@@ -214,16 +223,16 @@ for(j in 1:Nsims){
 
       # select out downstream lakes that does not have species at start of time-slot
       if(use_slope_barrier==TRUE){
-        # wbid_wrid_array <- get_wbid_wrid_array(con, pike_lakes)
-        reachable_lakes_pike <- get_reachable_lakes_wbid(con, pike_lakes, slope_barrier)
+        # wbid_wrid_array <- get_wbid_wrid_array(con, species_lakes)
+        reachable_lakes_species <- get_reachable_lakes(con, disperse_input$wrid, disperse_input$waterBodyIDs, "slope_max_max", slope_barrier, conmat_schema, conmat_table)
 
         #downstream_lakes <- get_downstream_lakes(con, unique(introduction_lakes), unique(introduction_wrid))
         # select out downstream lakes that does not have species at start of time-slot
         #downstream_lakes <- downstream_lakes[!(downstream_lakes$downstream_lakes %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1]),]
-        reachable_lakes_pike <- unique(reachable_lakes_pike$acclake[!(reachable_lakes_pike$acclake %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1])])
+        reachable_lakes_species <- setdiff(reachable_lakes_species[,1], inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1])
         # finally assign introduction to downstream lakes (without previous obs/intro)
 
-        tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% reachable_lakes_pike,1,tmp_trans$introduced)
+        tmp_trans$introduced <- ifelse(tmp_trans$waterBodyID %in% reachable_lakes_species,1,tmp_trans$introduced)
 
         #.............................................................
         # Upstream dispersal - NB! Check this part.... unequal length of upstream_lakes and upstream_slopes vector!!!!
@@ -254,7 +263,7 @@ for(j in 1:Nsims){
       }
       ##..or dispersal probability based on analyses from Sam and Stefan
       if(use_disp_probability==TRUE){
-        lakes_reachable <-get_reachable_lakes_pike(con,unique(introduction_lakes))
+        lakes_reachable <- get_reachable_lakes_species(con,unique(introduction_lakes))
         # select out upstream lakes that does not have species at start of time-slot
         lakes_reachable <- lakes_reachable[!(lakes_reachable$accessible_lake %in% inndata_sim$waterBodyID[inndata_sim[focal_species_str]==1]),]
         # add lake intros to introduced vector, based on probability
@@ -269,7 +278,7 @@ for(j in 1:Nsims){
     intro <- tmp_trans$waterBodyID[tmp_trans$introduced==1]
     intro_is_secondary <-0
     if(with_secondary==TRUE){
-    intro_is_secondary <- ifelse(intro %in% reachable_lakes_pike,TRUE,FALSE)
+      intro_is_secondary <- ifelse(intro %in% reachable_lakes_species,TRUE,FALSE)
     }
     time_slot_i <- rep(i,length(intro))
     sim_j <- rep(j,length(intro))
@@ -296,6 +305,14 @@ for(j in 1:Nsims){
     tmp1 <- inndata_sim[focal_species_str]
     inndata_sim[focal_species_str][inndata_sim$waterBodyID %in% tmp_trans$waterBodyID[tmp_trans$introduced==1],] <- 1
 
+
+    # n_pop should be recalculated as well!!!
+    #system.time(geoselect_no_gjedde_pop_5000 <- dbGetQuery(con, paste0('SELECT al.id AS "waterBodyID", count(ol.geom) FROM
+    #                                       (SELECT id, geom FROM nofa.lake WHERE ecco_biwa_wr IN (',toString(unique(wbid_wrid$wrid)),')) AS al,
+    #                                       (SELECT geom FROM nofa.lake WHERE id IN (', toString(unique(intro)), ')) AS ol
+    #                                       WHERE ST_DWithin(al.geom, ol.geom, 5000) GROUP BY al.id'))
+    #)
+
     # recalculate distance to closest population and replace values
     # in inndata_sim where distance is smaller than previous;
     # i.e. accounting for situations where closest population is outside
@@ -305,8 +322,8 @@ for(j in 1:Nsims){
     tmp <- try(f_calc_dist(outdata=inndata_sim,species=focal_species),silent = TRUE)
     if(!is.null(dim(tmp))){
       inndata_sim$dist_to_closest_pop_log <- ifelse(log(tmp$dist_to_closest_pop)<inndata_sim$dist_to_closest_pop,
-                                                log(tmp$dist_to_closest_pop),
-                                                inndata_sim$dist_to_closest_pop_log)
+                                                    log(tmp$dist_to_closest_pop),
+                                                    inndata_sim$dist_to_closest_pop_log)
     } else {
       inndata_sim$dist_to_closest_pop_log <-  inndata_sim$dist_to_closest_pop_log
     }
@@ -340,7 +357,7 @@ tmpout[["time_slot_length"]] <- time_slot_length
 tmpout[["start_year"]] <- start_year
 
 # Write output to local disk
-url <- paste(simdir, "sim_out_",focal_species_str,"_agder_5simu.rds",sep="")
+url <- paste(simdir, "sim_out_",focal_species_str,"_fremmedfisk_5simu.rds",sep="")
 saveRDS(tmpout,url)
 
 # write output to BOX
@@ -354,7 +371,7 @@ dataToWrite <- sim_output_lake
 #f_write_simresult_to_db(dataToWrite=sim_output_lake,nameOfTable)
 
 
-dbWriteTable(con, c("fremmedfisk", "sim_gjedde_telemark_300"), value=dataToWrite,overwrite=TRUE)
+dbWriteTable(con, c(conmat_schema, paste0("sim_out_lake_", tolower(focal_species_str) ,"_without_ext_",Nsims,"simu")), value=dataToWrite,overwrite=TRUE)
 
 #dbWriteTable(con, c("temporary_agder", "sim_agder_output_esox_lucius"), as.data.frame(sim_output_lake))
 
