@@ -1,4 +1,5 @@
-# F?r
+#!/usr/bin/env Rscript
+# Før
 # # get vector of wbID for upstream lakes
 # upstream_lakes <- connectivity$upstream_lakes[connectivity$waterBodyID %in% introduction_lakes]
 # upstream_lakes <- paste(upstream_lakes,sep=",",collapse=",")
@@ -58,22 +59,22 @@ library(pool)
 # N?
 
 ### Hent ut alle vannregioner (for Agder (mange inneholder ingen innsj?er)
-get_wrids <- function(db_conection) {
-  sql_string <- "SELECT DISTINCT ON (a.gid) a.gid AS wrid FROM \"Hydrography\".\"waterregions_dem_10m_nosefi\" AS a, (SELECT geom FROM \"AdministrativeUnits\".\"Fenoscandia_Municipality_polygon\" WHERE county IN ('Vest-Agder', 'Aust-Agder')) AS b WHERE ST_Intersects(a.geom, b.geom);"
+get_wrids <- function(db_conection, connectivity_schema, connectivity_table) {
+  sql_string <- paste0('SELECT DISTINCT ON (wrid) wrid FROM ', connectivity_schema, '.', connectivity_table, ';')
   res <- dbGetQuery(db_conection, sql_string)[,1]
   res
 }
 # Eksempel
-wrids <- get_wrids(con)
+# wrids <- get_wrids(con, "fremmedfisk", "fremmedfisk_lake_connectivity_summary")
 
-### Hent ut data frame med kombinasjon av waterbodyID for alle innsj?er (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsj?er)
-get_wbid_wrid <- function(db_conection, eb_waterregionID) {
-  sql_string <- paste("SELECT id AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE ecco_biwa_wr IN (", toString(eb_waterregionID, sep=','), ")", sep='')
+### Hent ut data frame med kombinasjon av waterbodyID for alle innsj?er (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsjøer)
+get_wbid_wrid <- function(db_conection, connectivity_schema, connectivity_table) {
+  sql_string <- paste0('SELECT DISTINCT ON (wrid, "lakeID") wrid, "lakeID" AS "waterBodyID" FROM ', connectivity_schema, '.', connectivity_table, ';')
   res <- dbGetQuery(db_conection, sql_string)
   res
 }
 # Eksempel
-wbid_wrid <- get_wbid_wrid(con, wrids)
+# wbid_wrid <- get_wbid_wrid(con, "fremmedfisk", "fremmedfisk_lake_connectivity_summary")
 
 get_wbid_wrid_array <- function(db_conection, waterBodyID) {
   sql_string <- paste("SELECT array_to_string(array_agg(id), ',') AS \"waterBodyID\", ecco_biwa_wr AS wrid FROM nofa.lake WHERE id IN (", toString(waterBodyID, sep=','), ") GROUP BY ecco_biwa_wr;", sep='')
@@ -135,8 +136,10 @@ get_reachable_lakes_liklihood_pike <- function(db_conection, waterbodyID) {
 # Eksempel
 #accessible_lakes_likelihood_pike <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]))
 
-get_reachable_lakes <- function(db_conection, waterbodyID, slope_barrier) {
-  sql_string <- paste("SELECT DISTINCT ON (accessible_lakes) accessible_lakes_threshold(lake, ", slope_barrier, ") AS accessible_lakes FROM (SELECT unnest(ARRAY[", toString(waterbodyID, sep=','),"]) AS lake) AS x;", sep='')
+get_reachable_lakes <- function(db_conection, wrid, waterBodyID, slope_measure, slope_threshold, conmat_schema, conmat_table) {
+  sql_string <- paste0("SELECT DISTINCT ON (accessible_lakes_threshold_simple) nofa.accessible_lakes_threshold_simple(wrid, wbid, CAST('slope_max_max' AS text), 700, CAST('fremmedfisk' AS text), CAST('fremmedfisk_lake_connectivity' AS text)) FROM (SELECT unnest(ARRAY[", toString(wrid), ']) AS wrid, CAST(unnest(ARRAY[', toString(paste0("'", waterBodyID, "'", sep="")), "]) AS text) AS wbid) AS x")
+  #paste("SELECT DISTINCT ON (accessible_lakes) nofa.accessible_lakes_threshold_2(unnest(ARRAY[", toString(wrid, sep=','), "]), unnest(ARRAY[", toString(waterBodyID, sep=','), "]), CAST('", slope_measure, "' AS text), ", slope_threshold, ", CAST('", conmat_schema, "' AS text), CAST('", conmat_table, "' AS text)) AS accessible_lakes", sep='')
+  #print(sql_string)
   res <- dbGetQuery(db_conection, sql_string)
   res
 }
@@ -145,7 +148,7 @@ get_reachable_lakes <- function(db_conection, waterbodyID, slope_barrier) {
 #reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 700)
 # Eksempel (get only downstream or adjacent lakes)
 #reachable_lakes <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]), 0)
-get_reachable_lakes_wbid <- function(db_conection, waterbodyID, slope_barrier) {
+get_reachable_lakes_wbid <- function(db_conection, waterbodyID, slope_barrier, conmat_schema, conmat_table) {
   sql_string <- paste0('SELECT c."waterBodyID" AS source, l.to_lake AS acclake
       FROM agder.lake_connectivity AS l,
 (
@@ -159,7 +162,6 @@ get_reachable_lakes_wbid <- function(db_conection, waterbodyID, slope_barrier) {
   (
   SELECT ecco_biwa_wr AS wrid, id AS "waterBodyID" FROM nofa.lake WHERE id IN(', toString(waterbodyID, sep=','), ')
 ) AS c
-
       WHERE l.wrid = c.wrid AND
       l.to_lake = c."waterBodyID" AND l.downstream_slope_max_max <= 700')
                        res <- dbGetQuery(db_conection, sql_string)
