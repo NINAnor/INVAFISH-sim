@@ -21,11 +21,16 @@ for (p in req_packages) {
 }
 libraries(req_packages)
 
-scriptdir <- '~/R_script/INVAFISH-sim/'
+scriptdir <- '~/INVAFISH-sim/'
 setwd(scriptdir)
 
 simdir <- '~/temp/'
 try(system(paste0('mkdir ', simdir)))
+
+slope_thresholds <- list("26181"=c(600, 700, 800), # gjedde
+                         "26436"=c(600, 700, 800), # solabbor
+                         "26138"=c(600, 700, 800)  # ørekyt
+)
 
 focal_speciesid <- 26181
 
@@ -36,7 +41,7 @@ end_year <- 2017
 conmat_schema <- "fremmedfisk"
 conmat_table <- "fremmedfisk_lake_connectivity"
 conmat_summary_table <- "fremmedfisk_lake_connectivity_summary"
-#host: vm-srv-wallace.vm.ntnu.no
+
 ### Setup database connection
 #Set connection parameters
 pg_drv <- RPostgreSQL::PostgreSQL()
