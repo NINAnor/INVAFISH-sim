@@ -46,7 +46,7 @@ outdata$county <- factor(outdata$county)
 # outdata$n_pop <- NA
 # outdata$n_pop <- ifelse(outdata$waterBodyID %in% geoselect_no_gjedde_pop_5000$waterBodyID,geoselect_no_gjedde_pop_5000$count,outdata$n_pop)
 
-covariates <- c("distance_to_road_log", "dist_to_closest_pop_log", "SCI", "eurolst_bio10","eurolst_bio11", "buffer_5000m_population_2006" ,"area_km2_log", "n_pop")
+covariates <- c("distance_to_road_log", "dist_to_closest_pop_log", "SCI", "eurolst_bio10","elevation", "buffer_5000m_population_2006" ,"area_km2_log", "n_pop")
 
 #focal_species_vec <- unique(outdata$focal_species)
 # remove all populations of focal species where focal species is present at start of time-slot

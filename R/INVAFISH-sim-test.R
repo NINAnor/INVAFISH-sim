@@ -21,7 +21,7 @@ for (p in req_packages) {
 }
 libraries(req_packages)
 
-scriptdir <- '~/INVAFISH-sim/'
+scriptdir <- '~/R_script/INVAFISH-sim/'
 setwd(scriptdir)
 
 simdir <- '~/temp/'
@@ -36,7 +36,7 @@ end_year <- 2017
 conmat_schema <- "fremmedfisk"
 conmat_table <- "fremmedfisk_lake_connectivity"
 conmat_summary_table <- "fremmedfisk_lake_connectivity_summary"
-
+#host: vm-srv-wallace.vm.ntnu.no
 ### Setup database connection
 #Set connection parameters
 pg_drv <- RPostgreSQL::PostgreSQL()
@@ -142,7 +142,7 @@ source('./R/git_make_brt.R')
 temp_inc <- 0 # temperature increas
 
 # simulation and time specific stuff
-Nsims <- 200 # number of iterations
+Nsims <- 20 # number of iterations
 sim_duration <- 1 # Duration of the scenario, in years (will be corced to multiple of time_slot_length)
 time_slot_length <- 50 # Duration of the time-slot, in years (time-span of each time-slot)
 gmb_time_slot_length <- 50 # Duration of the time-slot, in years, used to estimate establishment probability
@@ -182,7 +182,7 @@ if(!is.na(exwaterbodyID)) {
 }
 
 source('./R/git_predict_introduction_events.R')
-brt_mod <-brt_mod_simp
+brt_mod <-brt_mod_norway_fremmedfisk_gjedde
 
 # j simulation runs...
 for(j in 1:Nsims){
@@ -194,7 +194,7 @@ for(j in 1:Nsims){
   for(i in 1:n_time_slots){
 
     ### i.1 predict translocations and store new introductions in temp object
-    tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,focal_species,temp_inc,start_year_sim)
+    tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,focal_species,temp_inc)
     tmp_trans <- tmp_trans[!is.na(tmp_trans[focal_species_str]),]
     # include secondary dispeersal?
     if(with_secondary==TRUE){
