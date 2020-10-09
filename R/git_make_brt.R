@@ -113,6 +113,7 @@ get.train.diganostic.func=function(tree.com,learn,indf){
 #define complexity and learning rate
 tree.complexity<-c(1:9)
 learning.rate<-c(0.01, 0.025, 0.005, 0.0025,0.001)
+stepsize <- 100
 
 #setup parallel backend to use n processors
 cl<-parallel::makeCluster(cores)
@@ -186,6 +187,8 @@ train.results.par <- train.results.par[order(train.results.par$cv.deviance,-trai
 # Results deviate when using %do% and %dopar%
 train.results.par #Includes a dataframe with ordered (numbered) choice based on AUC cv.dev and cv.AUC, be aware that there are mutiple ways of judging the models...
 
+best_params <- train.results.par[1,]
+
 
 # summed_likelyhood_for_non_introduction <- prod(1-ifelse(is.na(tmp_trans$prob_introduction),0,tmp_trans$prob_introduction))
 # summed_likelyhood_for_introduction <- 1 - summed_likelyhood_for_non_introduction
@@ -200,7 +203,7 @@ train.results.par #Includes a dataframe with ordered (numbered) choice based on 
 # Use best parametrization from train.results
 
 # brt_mod<-gbm.fixed(data=analyse.df, gbm.x = c( "distance_to_road_log", "dist_to_closest_pop_log","SCI","minimumElevationInMeters","buffer_5000m_population_2006" ,"area_km2_log","n_pop"), gbm.y = "introduced",family = "bernoulli",tree.complexity = 9, learning.rate = 0.001,bag.fraction = 1,n.trees=4000)
-brt_mod<-gbm.step(data=analyse.df, gbm.x=covariates, gbm.y="introduced", family="bernoulli", tree.complexity=8, step.size=100, learning.rate=0.025, n.trees=100, max.trees=4000)
+brt_mod <- gbm.step(data=analyse.df, gbm.x=covariates, gbm.y="introduced", family="bernoulli", tree.complexity=best_params$tc, step.size=100, learning.rate=best_params$lr, n.trees=best_params$n.trees - (5 * stepsize), max.trees=best_params$n.trees + (5 * stepsize))
 names(brt_mod$gbm.call)[1] <- "dataframe"
 
 predictors<-gbm.simplify(brt_mod,n.folds = 10, n.drops = "auto", alpha = 1, prev.stratify = TRUE,
