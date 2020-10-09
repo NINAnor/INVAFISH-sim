@@ -27,6 +27,11 @@ setwd(scriptdir)
 simdir <- '~/temp/'
 try(system(paste0('mkdir ', simdir)))
 
+slope_thresholds <- list("26181"=c(600, 700, 800), # gjedde
+                         "26436"=c(600, 700, 800), # solabbor 
+                         "26138"=c(600, 700, 800)  # ørekyt
+                         )
+
 focal_speciesid <- 26181
 
 start_year <- 1967
@@ -53,6 +58,7 @@ if (rstudioapi::isAvailable()) {
   pg_user <- getPass(msg=user_msg)
   pg_password <- getPass(msg=pw_msg)
 }
+
 
 
 pool <- dbPool(
@@ -84,12 +90,10 @@ inndata <- readRDS(paste0(simdir, "view_occurrence_by_event.rds", sep=''))
 # From get_geoselect_native.R
 source('./R/get_geoselect_native.R')
 geoselect_native <- get_historic_distribution(con, focal_speciesid)
+counties <- dbGetQuery(con, 'SELECT DISTINCT (county) county FROM "AdministrativeUnits"."Fenoscandia_Municipality_polygon" WHERE "countryCode" = \'NO\' AND county NOT IN (\'Finnmark\',\'Troms\',\'Nordland\');')
 geoselect_no_gjedde_pop_5000 <- dbGetQuery(con, paste0('SELECT al.id AS "waterBodyID", count(ol.geom) FROM
-                                                  nofa.lake AS al,
-                                           (SELECT geom FROM nofa.lake WHERE id IN (SELECT "waterBodyID" FROM nofa.get_last_occurrence_status(
-                                           "taxonID" => ', focal_speciesid, ',
-                                           wrids => \'', gsub(" ", "", toString(unique(wbid_wrid$wrid))), '\'
-                                           ))) AS ol
+                                                  (SELECT id, geom FROM nofa.lake WHERE county IN (', paste0("\'", gsub(", ", "\', \'", toString(unique(counties[,1]))), "\'"), ')) AS al,
+                                           (SELECT geom FROM nofa.lake WHERE id IN (SELECT "waterBodyID" FROM "fremmedfisk"."fremmedfisk_', focal_speciesid, '")) AS ol
                                            WHERE ST_DWithin(al.geom, ol.geom, 5000)
                                            GROUP BY al.id'))
 names(geoselect_no_gjedde_pop_5000)[2] = "n_pop"
@@ -146,7 +150,7 @@ Nsims <- 200 # number of iterations
 sim_duration <- 1 # Duration of the scenario, in years (will be corced to multiple of time_slot_length)
 time_slot_length <- 50 # Duration of the time-slot, in years (time-span of each time-slot)
 gmb_time_slot_length <- 50 # Duration of the time-slot, in years, used to estimate establishment probability
-n_time_slots <- 2#as.integer(sim_duration/time_slot_length)
+n_time_slots <- 1#as.integer(sim_duration/time_slot_length)
 start_year_sim <- 2017
 end_year_sim <- start_year_sim + time_slot_length
 # secondary dispersal stuff
@@ -194,7 +198,7 @@ for(j in 1:Nsims){
   for(i in 1:n_time_slots){
 
     ### i.1 predict translocations and store new introductions in temp object
-    tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,focal_species,temp_inc,start_year_sim)
+    tmp_trans <- f_predict_introduction_events_gmb(inndata_sim,brt_mod,analyse.df,focal_species,temp_inc,start_year_sim)
     tmp_trans <- tmp_trans[!is.na(tmp_trans[focal_species_str]),]
     # include secondary dispeersal?
     if(with_secondary==TRUE){
