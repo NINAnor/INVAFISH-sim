@@ -27,10 +27,11 @@ f_predict_introduction_events_gmb <-function(outdata,brt_mod,traindata,species,t
   species2=stringr::str_replace(species, " ", "_") 
   #outdata$distance_to_road<-outdata$distance_to_road+0.01 
   #outdata$distance_to_road_log<-log(outdata$distance_to_road)
-  outdata$dist_to_closest_pop_log<-log(outdata$dist_to_closest_pop)
+  #outdata$dist_to_closest_pop_log<-log(outdata$dist_to_closest_pop)
+
   for(c in covariates) {
-    outdata[,c] <- ifelse(outdata[,c]>max(traindata[,c], rm.na=TRUE), max(traindata[,c], rm.na=TRUE), outdata[,c]) #print(paste0(c, ": adf: ", min(analyse.df[c]), "idf: ", min(inndata_sim[c])))
-    outdata[c] <- ifelse(outdata[,c]<min(traindata[,c], rm.na=TRUE), min(traindata[,c], rm.na=TRUE), outdata[,c]) #print(paste0(c, ": adf: ", min(analyse.df[c]), "idf: ", min(inndata_sim[c])))
+    outdata[,c] <- ifelse(outdata[,c]>max(traindata[,c], na.rm=TRUE), max(traindata[,c], na.rm=TRUE), outdata[,c]) #print(paste0(c, ": adf: ", min(analyse.df[c]), "idf: ", min(inndata_sim[c])))
+    outdata[,c] <- ifelse(outdata[,c]<min(traindata[,c], na.rm=TRUE), min(traindata[,c], na.rm=TRUE), outdata[,c]) #print(paste0(c, ": adf: ", min(analyse.df[c]), "idf: ", min(inndata_sim[c])))
   }
   
   data_no_species<-outdata[outdata[[species2]] == 0,]
@@ -41,6 +42,7 @@ f_predict_introduction_events_gmb <-function(outdata,brt_mod,traindata,species,t
   data_no_species$introduced<-rbinom(length(data_no_species$prob_introduction), size = 1, prob=data_no_species$prob_introduction)
   data_no_species[[species2]]<-ifelse(data_no_species$introduced==1,1,0)
   outdata<-bind_rows(data_no_species,data_w_species)
+  
   return(outdata)
 }
 
