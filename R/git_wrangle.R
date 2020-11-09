@@ -59,8 +59,12 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   
   # load spatial filter (polygon) and set projection to epsg:4326
   latlong = "+init=epsg:4326"
+  if (length(geoselect_native) > 0) {
   geoselect_spdf <- spTransform(geoselect_native,latlong)
-  
+  } else {
+    geoselect_spdf <- geoselect_native
+  }
+    
   # convert inndata to SpatialPointDataFrame
   #inndata<-outdata_timeslot
   inndata_species <- as.data.frame(inndata_species)
@@ -136,6 +140,7 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   # Calculate distance to closest population of focal species to any lake in dataset
   # at start of time-slot for all locations with fish observations at end
   # of time-slot i. Use get.knnx from the FNN package.
+  if (length(data1[,1]) > 0) {
   nn <- get.knnx(data1[c("utm_x","utm_y")],data2[c("utm_x","utm_y")],2)
   
   dist_to_closest_pop <- ifelse(nn$nn.dist[,1]==0,nn$nn.dist[,2],nn$nn.dist[,1])
@@ -150,7 +155,10 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   
   # match back with inndata
   inndata3 <- left_join(inndata2,distance_data,by="waterBodyID")
-  
+  } else {
+    inndata3 <- inndata2
+    inndata3$dist_to_closest_pop <- as.numeric(NA)
+  }
   #########################################################################
   # Add 0/1 column of introductions occuring during timeslot -------------
   #########################################################################
