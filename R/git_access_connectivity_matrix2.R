@@ -68,8 +68,8 @@ get_wrids <- function(db_conection, connectivity_schema, connectivity_table) {
 # wrids <- get_wrids(con, "fremmedfisk", "fremmedfisk_lake_connectivity_summary")
 
 ### Hent ut data frame med kombinasjon av waterbodyID for alle innsj?er (kolonne 1) og id for vannregioner (kolonne 2) (her er det kun vannregioner som inneholder innsjøer)
-get_wbid_wrid <- function(db_conection, connectivity_schema, connectivity_table) {
-  sql_string <- paste0('SELECT DISTINCT ON (wrid, "lakeID") wrid, "lakeID" AS "waterBodyID" FROM ', connectivity_schema, '.', connectivity_table, ';')
+get_wbid_wrid <- function(db_conection, connectivity_schema) {
+  sql_string <- paste0('SELECT ecco_biwa_wr AS wrid, id AS "waterBodyID" FROM nofa.lake WHERE ecco_biwa_wr IN (SELECT wrid FROM ', connectivity_schema, '.wrids);')
   res <- dbGetQuery(db_conection, sql_string)
   res
 }
@@ -137,7 +137,7 @@ get_reachable_lakes_liklihood_pike <- function(db_conection, waterbodyID) {
 #accessible_lakes_likelihood_pike <- get_reachable_upstream_lakes(con, unique(wbid_wrid[,2][1:100]))
 
 get_reachable_lakes <- function(db_conection, wrid, waterBodyID, slope_measure, slope_threshold, conmat_schema, conmat_table) {
-  sql_string <- paste0("SELECT DISTINCT ON (accessible_lakes_threshold_simple) nofa.accessible_lakes_threshold_simple(wrid, wbid, CAST('slope_max_max' AS text), 700, CAST('fremmedfisk' AS text), CAST('fremmedfisk_lake_connectivity' AS text)) FROM (SELECT unnest(ARRAY[", toString(wrid), ']) AS wrid, CAST(unnest(ARRAY[', toString(paste0("'", waterBodyID, "'", sep="")), "]) AS text) AS wbid) AS x")
+  sql_string <- paste0("SELECT DISTINCT ON (accessible_lakes_threshold_simple) nofa.accessible_lakes_threshold_simple(wrid, wbid, CAST('slope_max_max' AS text), ", slope_threshold, ", CAST('fremmedfisk' AS text), CAST('fremmedfisk_lake_connectivity' AS text)) FROM (SELECT unnest(ARRAY[", toString(wrid), ']) AS wrid, CAST(unnest(ARRAY[', toString(paste0("'", waterBodyID, "'", sep="")), "]) AS text) AS wbid) AS x")
     #paste("SELECT DISTINCT ON (accessible_lakes) nofa.accessible_lakes_threshold_2(unnest(ARRAY[", toString(wrid, sep=','), "]), unnest(ARRAY[", toString(waterBodyID, sep=','), "]), CAST('", slope_measure, "' AS text), ", slope_threshold, ", CAST('", conmat_schema, "' AS text), CAST('", conmat_table, "' AS text)) AS accessible_lakes", sep='')
   #print(sql_string)
   res <- dbGetQuery(db_conection, sql_string)
