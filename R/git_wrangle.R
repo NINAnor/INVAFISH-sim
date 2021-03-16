@@ -192,8 +192,8 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   #######################################################################################
 
   inndata4 <- inndata3 %>%
-    group_by(waterBodyID,county,municipality,countryCode) %>%
-    summarise(dist_to_closest_pop=mean(dist_to_closest_pop),
+    dplyr::group_by(waterBodyID,county,municipality,countryCode) %>%
+    dplyr::summarise(dist_to_closest_pop=mean(dist_to_closest_pop),
               n_pop=mean(n_pop))
 
   # get presence/absence aggregated for each time-slot,waterBody and focal species
