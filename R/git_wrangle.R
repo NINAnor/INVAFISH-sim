@@ -153,9 +153,9 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   #  dplyr::group_by(waterBodyID) %>%
   #  dplyr::summarize(dist_to_closest_pop=mean(dist_to_closest_pop))
   library(data.table)
-  setDT(distance_data)[ , .(dist_to_closest_pop = mean(dist_to_closest_pop)), by = waterBodyID]
+  distance_data <- setDT(distance_data)[ , .(dist_to_closest_pop = mean(dist_to_closest_pop)), by = waterBodyID]
   # match back with inndata
-  inndata3 <- left_join(inndata2,distance_data,by="waterBodyID")
+  inndata3 <- dplyr::left_join(inndata2,distance_data,by="waterBodyID")
   } else {
     inndata3 <- inndata2
     inndata3$dist_to_closest_pop <- as.numeric(NA)
