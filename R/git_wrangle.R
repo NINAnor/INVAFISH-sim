@@ -149,10 +149,11 @@ wrangle_and_slice <- function(start_year,end_year,inndata,focal_species,geoselec
   # run average distance for each waterBodyID (the problem of duplicated
   # waterBodyIDs here comes from input coords may resemble both outlet
   # or centroid of waterbody)
-  distance_data <- distance_data %>%
-    dplyr::group_by(waterBodyID) %>%
-    dplyr::summarize(dist_to_closest_pop=mean(dist_to_closest_pop))
-
+  #distance_data <- distance_data %>%
+  #  dplyr::group_by(waterBodyID) %>%
+  #  dplyr::summarize(dist_to_closest_pop=mean(dist_to_closest_pop))
+  library(data.table)
+  setDT(distance_data)[ , .(dist_to_closest_pop = mean(dist_to_closest_pop)), by = waterBodyID]
   # match back with inndata
   inndata3 <- left_join(inndata2,distance_data,by="waterBodyID")
   } else {
